@@ -82,7 +82,7 @@ For example, to provide the string `"blue"` as the value for key
 
     28:What is your favorite color?,4:blue,\n
 
-The unicode snowman character (U+2603) would be written as the three bytes
+The unicode snowman character (&#x263A; U+2603) would be written as the three bytes
 `0xe2`, `0x98`, `0x83`.
 
 See also the auth channel description below.
