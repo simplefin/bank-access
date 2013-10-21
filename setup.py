@@ -10,4 +10,7 @@ setup(
     packages=[
         'banka', 'banka.test',
     ],
+    scripts=[
+        'bin/banka',
+    ]
 )
