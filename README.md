@@ -47,7 +47,13 @@ Install `banka`:
 
 then run the script like this:
 
-    PATH=util/:$PATH bash inst/bankA.com/list-accounts 3>&2
+    banka wr inst/bankA.com/list-accounts
+
+`banka wr inst/bankA.com/list-accounts` is nearly equivalent to just doing
+`inst/bankA.com/list-accounts` with the added benefit that sensitive data typed
+in to the terminal is not shown.  If you aren't using a terminal to run this
+script (e.g. you are spawning this from within another process), you can just
+call `inst/bankA.com/list-accounts`
 
 
 ## If you don't see your bank listed ##

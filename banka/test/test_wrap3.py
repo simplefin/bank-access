@@ -20,7 +20,7 @@ class Wrap3ProtocolTest(TestCase):
         called = []
         proto = Wrap3Protocol(lambda *a: called.append(a))
         proto.childDataReceived(3, 'foo\n')
-        self.assertEqual(called, [(proto, 'foo')])
+        self.assertEqual(called, [(proto, 'foo\n')])
 
     def test_channel3Line(self):
         """
@@ -33,7 +33,7 @@ class Wrap3ProtocolTest(TestCase):
         proto.childDataReceived(2, 'channel 2')
         proto.childDataReceived(1, 'channel 1')
         proto.childDataReceived(3, 'bar\n')
-        self.assertEqual(called, [(proto, 'foobar')])
+        self.assertEqual(called, [(proto, 'foobar\n')])
 
     def test_stdout_err(self):
         """

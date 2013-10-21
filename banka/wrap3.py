@@ -6,8 +6,18 @@ from twisted.internet import defer
 
 
 class Wrap3Protocol(ProcessProtocol):
+    """
+    @ivar done: A Deferred which fires when this protocol is done.
+    """
 
     def __init__(self, ch3_receiver, stdout=None, stderr=None):
+        """
+        @param ch3_receiver: A function that will be called with two arguments
+            (this L{Wrap3Protocol} instance, the line) for every line on
+            channel 3 that is received by this protocol.
+        @param stdout: A file-like object to which stdout will be written.
+        @param stderr: A file-like object to which stderr will be written.
+        """
         self.ch3_receiver = ch3_receiver
         self._buffer = ''
         self.stdout = stdout or StringIO()
@@ -19,7 +29,7 @@ class Wrap3Protocol(ProcessProtocol):
             self._buffer += data
             while self._buffer.count('\n'):
                 line, self._buffer = self._buffer.split('\n', 1)
-                self.ch3_receiver(self, line)
+                self.ch3_receiver(self, line+'\n')
         else:
             ProcessProtocol.childDataReceived(self, childFD, data)
 
@@ -34,7 +44,6 @@ class Wrap3Protocol(ProcessProtocol):
             self.done.callback(status.value)
         else:
             self.done.errback(status)
-        #self.done.callback(status.value)
 
 
 def wrap3Prompt(getpass_fn, proto, prompt):
