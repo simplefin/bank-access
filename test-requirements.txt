@@ -2,4 +2,5 @@ Twisted>=13.1.0
 coverage==3.7
 pep8==1.4.6
 pyflakes==0.7.3
+mock==1.0.1
 -r requirements.txt
