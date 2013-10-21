@@ -37,7 +37,15 @@ And let your bank know that you want them to implement SimpleFIN!
 ## If you see your bank listed ##
 
 If you see your bank listed in the `inst` directory, clone this repo,
-install any dependencies then run the script like this:
+install any dependencies:
+
+    pip install -r requirements.txt
+
+Install `banka`:
+
+    python setup.py install
+
+then run the script like this:
 
     PATH=util/:$PATH bash inst/bankA.com/list-accounts 3>&2
 
@@ -54,7 +62,7 @@ to your bank.  The rest of this document describes how to do that.
 
 The structure of this repository is as follows:
 
-    util/
+    banka/
     inst/
         bankA.com/
             _identity
@@ -63,8 +71,8 @@ The structure of this repository is as follows:
             ...
 
 
-- `util/` contains utility scripts that might be shared among bank access
-  scripts such as scripts that connect to OFX servers.
+- `banka/` contains a Python library for code useful to all scripts
+  such as scripts that connect to OFX servers or that parse OFX files.
 
 - `inst/` contains a directory per known financial institution (bank,
   credit union, etc...).  Please use the domain name of the institution for
