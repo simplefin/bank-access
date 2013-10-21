@@ -14,5 +14,5 @@ See LICENSE for details.
     Copyright (c) The SimpleFIN Team
     See LICENSE for details.
 
-2. (Optionally) add your name to `AUTHORS`
+3. (Optionally) add your name to `AUTHORS`
 
