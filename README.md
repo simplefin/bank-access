@@ -18,6 +18,18 @@ In this document, the following terms are used interchangeably:
 - credit union
 
 
+# Goal #
+
+The goal of this repository is to eventually not exist.  These scripts exist
+as a bridge from banks which don't implement SimpleFIN to tools which
+expect SimpleFIN.  It is our hope that eventually, all banks will implement
+SimpleFIN, which will render this repository useless.
+
+Please contribute a script for your banks!
+
+And let your bank know that you want them to implement SimpleFIN!
+
+
 # Script API #
 
 
@@ -56,36 +68,44 @@ sample Indentity File looks like this:
 
 ## Properties common to all Bank Access scripts ##
 
-All Bank Access scripts are user executable (i.e. `chmod u+x name-of-script`).
 These scripts do the work of connecting to a bank, authenticating as a
-particular user and accessing some resource(s) from the bank.  The scripts use
-I/O channels in the ways described below.
+particular user and accessing some resource(s) from the bank.
 
-Scripts may be written in any language, though we'd prefer scripts in languages
-already present over new languages.  As of this writing, no scripts exist but
-imagine we'll develop a complement of Python, Ruby and JavaScript scripts.
+1. All Bank Access scripts are user executable (i.e. `chmod u+x name-of-script`).
 
-If there's a great desire for C, C++, Java, Go or other compiled languages,
-we could make adjustments.
+2. The scripts use I/O channels in the ways described below.
+
+3. Scripts may be written in any language, though we'd prefer scripts in
+   languages already present over new languages.
+
+
 
 
 ### stdin (IN, channel 0) ###
 
 Information required by the script (including sensitive information such as
-passwords, PINs and security question answers) are written to stdin using UTF-8
-encoding and delimited with netstrings like this:
+passwords, PINs and security question answers) are written to stdin as a JSON
+string terminated by a newline (byte 0x0A), like this:
 
-    <length_of_key>:<key>,<length_of_value>:<value>,\n
+    <JSON string>\n
 
-For example, to provide the string `"blue"` as the value for key
-`"What is your favorite color?"`, the following would be written to stdin:
+For example, to provide the string `"blue"` the following would be written to
+stdin (note the double quotes):
 
-    28:What is your favorite color?,4:blue,\n
+    "blue"
 
-The unicode snowman character (&#x263A; U+2603) would be written as the three bytes
-`0xe2`, `0x98`, `0x83`.
+Which is a string of these bytes (in hexadecimal):
 
-See also the auth channel description below.
+    22 62 6C 75 65 22 0A
+
+The unicode snowman character (&#x263A; U+2603) would be written like this:
+
+    "\u2603"
+
+
+Each item written to stdin should correspond to a question being written to
+the auth channel (see below).
+
 
 
 ### stdout (OUT, channel 1) ###
@@ -94,6 +114,8 @@ For successful runs, the result of the script will be written to stdout.
 For most scripts, this will be a JSON document.
 
 In the case of an error exit code, the meaning of stdout is not defined.
+
+
 
 
 ### stderr (OUT, channel 2) ###
@@ -105,6 +127,8 @@ is determined by the exit code only.
 The format of stderr is not defined.
 
 
+
+
 ### auth (OUT, channel 3) ###
 
 XXX this is not solidified
@@ -113,15 +137,22 @@ In addition to the standard I/O channels, each Bank Access script may also
 write to channel 3, which is used for authentication.  When, during the course
 of connecting to a bank, a script requires information from the runner of the
 script (such as a username, password, security question answer, etc...), the
-script will write to channel 3 using the following format:
+script will write a JSON string followed by a newline (byte 0x0A) to channel 3
+in the following format:
 
-    <length_of_key>:<key>,\n
+    <JSON key>\n
 
-For example, if a username is required the script would write to channel 3:
+For example, if a username is required the script would write to channel 3
+(note the double quotes):
 
-    8:Username,\n
+    "Username"
 
-To run a script with a third channel that is redirected to stdout do this:
+Which is a string of these bytes (in hexadecimal):
+    
+    22 55 73 65 72 6E 61 6D 65 22 0A
+
+
+To run a script with channel 3 redirected to stdout, do this:
 
     bash the_script 3>&1
 
@@ -135,18 +166,20 @@ to submit more examples).
 Bash:
 
     #!/bin/bash
-    echo "foo" >&3
+    echo '"foo"' >&3
 
 Python
 
     #!/usr/bin/python
     import os
-    os.write(3, 'foo')
+    import json
+    os.write(3, json.dumps('foo')+'\n')
 
 
 ## List Accounts ##
 
 List Accounts scripts must be named `list-accounts` and is used to produce a
+JSON document which has many fields in common with a
 [SimpleFIN Account Set](http://simplefin.org/protocol.html#account-set).
 
 The script must accept the following optional command-line arguments:
@@ -160,3 +193,8 @@ The script must accept the following optional command-line arguments:
   If provided, then include transactions before (but not including) the given
   timestamp.
 
+
+### Authentication ###
+
+It is required that the first piece of authentication asked for by the
+`list-accounts` script be the username/account number.
