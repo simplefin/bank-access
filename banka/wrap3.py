@@ -12,6 +12,7 @@ class Wrap3Protocol(ProcessProtocol):
         self._buffer = ''
         self.stdout = stdout or StringIO()
         self.stderr = stderr or StringIO()
+        self.done = defer.Deferred()
 
     def childDataReceived(self, childFD, data):
         if childFD == 3:
@@ -27,6 +28,13 @@ class Wrap3Protocol(ProcessProtocol):
 
     def errReceived(self, data):
         self.stderr.write(data)
+
+    def processEnded(self, status):
+        if status.value.exitCode == 0:
+            self.done.callback(status.value)
+        else:
+            self.done.errback(status)
+        #self.done.callback(status.value)
 
 
 def wrap3Prompt(getpass_fn, proto, prompt):

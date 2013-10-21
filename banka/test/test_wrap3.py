@@ -1,7 +1,9 @@
 # Copyright (c) The SimpleFIN Team
 # See LICENSE for details.
 from twisted.trial.unittest import TestCase
-from twisted.internet import defer
+from twisted.internet import defer, error
+from twisted.python.failure import Failure
+
 from StringIO import StringIO
 
 from mock import MagicMock
@@ -53,6 +55,24 @@ class Wrap3ProtocolTest(TestCase):
         proto = Wrap3Protocol(None)
         self.assertTrue(isinstance(proto.stdout, StringIO))
         self.assertTrue(isinstance(proto.stderr, StringIO))
+
+    def test_done(self):
+        """
+        A done Deferred should be called back when the process is done.
+        """
+        proto = Wrap3Protocol(None)
+        err = error.ProcessDone(0)
+        proto.processEnded(Failure(err))
+        self.assertEqual(self.successResultOf(proto.done), err)
+
+    def test_doneError(self):
+        """
+        A done Deferred should be errbacked if a process exits with an error.
+        """
+        proto = Wrap3Protocol(None)
+        err = Failure(error.ProcessTerminated(12))
+        proto.processEnded(err)
+        self.assertEqual(self.failureResultOf(proto.done), err)
 
 
 class wrap3PromptTest(TestCase):
