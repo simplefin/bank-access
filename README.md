@@ -32,45 +32,6 @@ And let your bank know that you want them to implement SimpleFIN!
 
 
 
-# Methods of Bridging #
-
-The method a script uses to bridge between a bank and SimpleFIN depends on
-what the bank makes available.  In order of preference, try the following when
-writing a script for this repository:
-
-1. OFX Server
-
-   If the bank provides an OFX service, there (XXX will be) are utility scripts
-   that will make connecting to that bank very easy.
-
-2. OFX file download
-
-   If the bank allows users to download OFX files, there (XXX will be) are
-   utility scripts that will make parsing those downloaded files easy.
-
-3. Some other file format
-
-   If the bank allows users to download files in formats other than OFX,
-   it will probably be easier to parse those files than to scrape the page.
-
-4. Scraping
-
-   If the bank doesn't provide any of the above, but they have a web portal,
-   write a script that scrapes the page for transaction/account information.
-
-5. Horse and Buggy
-
-   If the bank doesn't have a web portal, you will need to write a script that
-   hires a horse and buggy (including rider) to go to the bank in person, with
-   your credentials written on parchment*.  The script must wait for the horse,
-   buggy (and rider) to return with a listing of account details (in the form
-   of a JSON document).
-
-   * in the event that further authentication is required, either horse, rider
-   or buggy may use services available (such as a telegraph or pigeon) to
-   contact the running script for the required information.
-
-
 # Script API #
 
 
@@ -288,3 +249,45 @@ optional command-line arguments:
 
 It is required that the first piece of authentication asked for by the
 `list-accounts` script be the username/account number.
+
+
+
+# Methods of Bridging #
+
+The method a script uses to bridge between a bank and SimpleFIN depends on
+what the bank makes available.  In order of preference, try the following when
+writing a script for this repository:
+
+1. OFX Server
+
+   If the bank provides an OFX service, there (XXX will be) are utility scripts
+   that will make connecting to that bank very easy.
+
+2. OFX file download
+
+   If the bank allows users to download OFX files, there (XXX will be) are
+   utility scripts that will make parsing those downloaded files easy.
+
+3. Some other file format
+
+   If the bank allows users to download files in formats other than OFX,
+   it will probably be easier to parse those files than to scrape the page.
+
+4. Scraping
+
+   If the bank doesn't provide any of the above, but they have a web portal,
+   write a script that scrapes the page for transaction/account information.
+
+5. Horse and Buggy
+
+   If the bank doesn't have a web portal, you will need to write a script that
+   hires a horse and buggy (including rider) to go to the bank in person, with
+   your credentials written on parchment*.  The script must wait for the horse,
+   buggy (and rider) to return with a listing of account details (in the form
+   of a JSON document).
+
+   * in the event that further authentication is required, either horse, rider
+   or buggy may use services available (such as a telegraph or pigeon) to
+   contact the running script for the required information.
+
+
