@@ -6,7 +6,7 @@ See LICENSE for details.
 This repository contains a collection of scripts that can be used to
 programmatically get bank transaction information.  The scripts herein:
 
-1. Are read-only (they do not mutate the financial state of a bank).
+1. Do not mutate the financial state of a bank (like doing a transfer).
 
 2. Provide a consistent interface (see below).
 
@@ -21,7 +21,7 @@ In this document, the following terms are used interchangeably:
 
 # Goal #
 
-The goal of this repository is to eventually not exist.  These scripts exist
+We want to deprecate this repository when the banks implement SimpleFIN.  These scripts exist
 as a bridge from banks which don't implement SimpleFIN to tools which
 expect SimpleFIN.  It is our hope that eventually, all banks will implement
 SimpleFIN, which will render this repository useless.
