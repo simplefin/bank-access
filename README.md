@@ -32,6 +32,23 @@ And let your bank know that you want them to implement SimpleFIN!
 
 
 
+# How to use this repo #
+
+## If you see your bank listed ##
+
+If you see your bank listed in the `inst` directory, clone this repo,
+install any dependencies then run the script like this:
+
+    PATH=util/:$PATH bash inst/bankA.com/list-accounts 3>&2
+
+
+## If you don't see your bank listed ##
+
+If you don't see your bank listed in the `inst` directory, clone this repo,
+make a directory for your institution, then write a script that will connect
+to your bank.  The rest of this document describes how to do that.
+
+
 # Script API #
 
 
@@ -39,10 +56,10 @@ The structure of this repository is as follows:
 
     util/
     inst/
-        bankA/
+        bankA.com/
             _identity
             list-accounts
-        bankB/
+        bankB.com/
             ...
 
 
@@ -50,7 +67,8 @@ The structure of this repository is as follows:
   scripts such as scripts that connect to OFX servers.
 
 - `inst/` contains a directory per known financial institution (bank,
-  credit union, etc...)
+  credit union, etc...).  Please use the domain name of the institution for
+  the directory name where possible.
 
 - `inst/*/_identity` is an Identity File for the bank directory it lives in
   (see below).
