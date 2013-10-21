@@ -92,8 +92,8 @@ string terminated by a newline (byte 0x0A), like this:
 
     <JSON string>\n
 
-For example, to provide the string `"blue"` the following would be written to
-stdin (note the double quotes):
+For example, to provide the string `blue` the following would be written to
+stdin followed by a newline (note the double quotes):
 
     "blue"
 
@@ -106,8 +106,9 @@ The unicode snowman character (&#x263A; U+2603) would be written like this:
     "\u2603"
 
 
-Each item written to stdin should correspond to a question being written to
-the auth channel (see below).
+Each item written to stdin corresponds to a question written to the auth
+channel (see below), and each answer must be given in the same order that
+the question was asked.
 
 
 
@@ -143,8 +144,8 @@ in the following format:
 
     <JSON key>\n
 
-For example, if a username is required the script would write to channel 3
-(note the double quotes):
+For example, if a username is required the script would write the following to
+channel 3, followed by a newline (note the double quotes):
 
     "Username"
 
@@ -152,6 +153,14 @@ Which is a string of these bytes (in hexadecimal):
     
     22 55 73 65 72 6E 61 6D 65 22 0A
 
+The runner of the script would then write the username followed by a newline
+on stdin like this (note the double quotes):
+
+    "bob_the_user"
+
+Which is a string of these bytes (in hexadecimal):
+
+    22 62 6F 62 5F 74 68 65 5F 75 73 65 72 22 0A
 
 To run a script with channel 3 redirected to stderr, do this:
 
