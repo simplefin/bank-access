@@ -7,7 +7,7 @@ See LICENSE for details.
 
 1. You must agree to the terms of the LICENSE for any submission and that you
    only submit code that is compatibly licensed.  A submission of code to this
-   project means you accept.
+   project means you accept the terms of the LICENSE.
 
 2. Include this boiler plate as a comment at the top of all files:
 
@@ -15,4 +15,3 @@ See LICENSE for details.
     See LICENSE for details.
 
 3. (Optionally) add your name to `AUTHORS`
-
