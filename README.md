@@ -63,7 +63,10 @@ sample Indentity File looks like this:
 
     ---
     name: The Big Bank of Money
-    homepage: https://thebigbankofmoney.example.com/
+    domain: thebigbankofmoney.com
+    simplefin_url: https://sfin.thebigbankofmoney.com
+
+The `name` and `domain` fields are required.  All others are optional.
 
 
 ## Properties common to all Bank Access scripts ##
@@ -131,8 +134,6 @@ The format of stderr is not defined.
 
 ### auth (OUT, channel 3) ###
 
-XXX this is not solidified
-
 In addition to the standard I/O channels, each Bank Access script may also
 write to channel 3, which is used for authentication.  When, during the course
 of connecting to a bank, a script requires information from the runner of the
@@ -152,9 +153,9 @@ Which is a string of these bytes (in hexadecimal):
     22 55 73 65 72 6E 61 6D 65 22 0A
 
 
-To run a script with channel 3 redirected to stdout, do this:
+To run a script with channel 3 redirected to stderr, do this:
 
-    bash the_script 3>&1
+    bash the_script 3>&2
 
 Other languages also include mechanisms for running processes that write to
 non-standard file descriptors.  Look it up for your language.
@@ -178,11 +179,50 @@ Python
 
 ## List Accounts ##
 
-List Accounts scripts must be named `list-accounts` and is used to produce a
-JSON document which has many fields in common with a
-[SimpleFIN Account Set](http://simplefin.org/protocol.html#account-set).
+List Accounts scripts must be named `list-accounts` and do the work of getting
+account transaction information.
 
-The script must accept the following optional command-line arguments:
+### Output ###
+
+`list-accounts` produces a JSON document which is *almost* a
+[SimpleFIN Account Set](http://simplefin.org/protocol.html#account-set) (see
+that document for field definitions).  The `list-accounts` script will lack an
+`id` field in each [Account](http://simplefin.org/protocol.html#account), and
+instead have an `_insecure_id` field which contains the bank's id for the
+account.
+
+Here's an example document:
+
+    {
+      "accounts": [
+        {
+          "org": {
+            "domain": "mybank.com"
+            "sfin-url": null
+          },
+          "_insecure_id": "9982739",
+          "name": "Savings",
+          "currency": "USD",
+          "balance": "100.23",
+          "available-balance": "75.23",
+          "balance-as-of": "AO334",
+          "last-transaction-posted": "2013-07-29T19:22:09.210",
+          "transactions": [
+            {
+              "id": "12394832938403",
+              "posted": "1995-02-17T23:56:12.22239",
+              "amount": "-33293.43",
+              "description": "Uncle Frank's Bait Shop",
+            }
+          ]
+        }
+      ]
+    }
+
+### Input ###
+
+In addition to the auth/stdin channel I/O, the script must accept the following
+optional command-line arguments:
 
 - `--start-date=YYYY-mm-dd[THH:MM:SS]`
   
