@@ -1,0 +1,42 @@
+#!/usr/bin/env python
+# Copyright (c) The SimpleFIN Team
+# See LICENSE for details.
+import argparse
+import sys
+from datetime import datetime
+
+
+
+def _convertToDateTime(s):
+    totry = [
+        '%Y-%m-%d',
+        '%Y-%m-%dT%H:%M:%S',
+    ]
+    for format in totry:
+        try:
+            dt = datetime.strptime(s, format)
+            return dt
+        except:
+            pass
+    raise argparse.ArgumentTypeError("Could not convert %r to timestamp" % (s,))
+
+
+def getParser():
+    parser = argparse.ArgumentParser(description='Connect to Ally Bank')
+    parser.add_argument('--start-date', dest='start_date',
+                        type=_convertToDateTime)
+    parser.add_argument('--end-date', dest='end_date',
+                        type=_convertToDateTime)
+    return parser
+
+
+def main(args):
+    parser = getParser()
+    args = parser.parse_args(args)
+    print args
+    print repr(args)
+
+
+if __name__ == '__main__':
+    import sys 
+    main(sys.argv[1:])
