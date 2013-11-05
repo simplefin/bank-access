@@ -151,7 +151,8 @@ the question was asked.
 For successful runs, the result of the script will be written to stdout.
 For most scripts, this will be a JSON document.
 
-In the case of an error exit code, the meaning of stdout is not defined.
+In the case of an non-zero (error) exit code, the meaning of stdout is not
+defined.
 
 
 
@@ -167,34 +168,49 @@ The format of stderr is not defined.
 
 
 
-### auth (OUT, channel 3) ###
+### control (OUT, channel 3) ###
 
 In addition to the standard I/O channels, each Bank Access script may also
-write to channel 3, which is used for authentication.  When, during the course
-of connecting to a bank, a script requires information from the runner of the
-script (such as a username, password, security question answer, etc...), the
-script will write a JSON string followed by a newline (byte 0x0A) to channel 3
-in the following format:
+write to channel 3, which is used for prompting for information.
+When, during the course of connecting to a bank, a script requires information
+from the runner of the script (such as a username, password,
+security question answer, etc...), the script will write a JSON object
+representing the prompt followed by a newline (byte 0x0A) to channel 3.
 
-    <JSON key>\n
+The object contains a combination of the following attributes:
 
-For example, if a username is required the script would write the following to
-channel 3, followed by a newline (note the double quotes):
+- `key` - **(required)** A unique identifier for this piece of information,
+  such as `"password"` or `"PIN"`.  The keys `"_state"` and `"_login"`
+  have special meaning.  `"_login"` must be the first piece of information
+  requested by the script.  If the caller has no value for `"_state"` it should
+  pass `null` in response to a request for `"_state"`. 
+- `sensitive` - (optional) A `true` value indicates that the data asked for
+  is sensitive.  Default: `true`
+- `persistent` - (optional) A `true` value indicates that the data asked for
+  is persistent and can be assumed to be the same from day to day.  For
+  instance, a PIN is persistent because it doesn't change, but a one-time
+  authorization token is not persistent.  Default: `true`
+- `prompt` - (optional) A string prompt for the piece of data.  If not provided
+  or if `null`, then the `key` will be used.  The `prompt` is a way to
+  provide a human-readable name for a `key`.
+- `value` - (optional) A JSON value for the given `key`.  The presence of a
+  `value` attribute means that the caller should store the value for the given
+  `key` for the next time the script is called.
 
-    "Username"
+**Important Note:** The first thing every script *must* ask for is the
+account number or login name for the account.
+
+For instance, a script may ask for the username by writing the following
+to channel 3, followed by a newline:
+
+    {"key":"_login", "prompt":"Username"}
 
 Which is a string of these bytes (in hexadecimal):
-    
-    22 55 73 65 72 6E 61 6D 65 22 0A
 
-The runner of the script would then write the username followed by a newline
-on stdin like this (note the double quotes):
+    7B 22 6B 65 79 22 3A 22 5F 6C 6F 67 69 6E 22 2C 20 22 70 72 6F 6D 70 74 22 3A 22 55 73 65 72 6E 61 6D 65 22 7D 0A
 
-    "bob_the_user"
 
-Which is a string of these bytes (in hexadecimal):
-
-    22 62 6F 62 5F 74 68 65 5F 75 73 65 72 22 0A
+#### Running ####
 
 To run a script with channel 3 redirected to stderr, do this:
 
@@ -262,19 +278,19 @@ Here's an example document:
       ]
     }
 
-### Input ###
+### Usage ###
 
-In addition to the auth/stdin channel I/O, the script must accept the following
-optional command-line arguments:
+The script must conform to this usage description:
 
-- `--start-date=YYYY-mm-dd[THH:MM:SS]`
-  
-  If provided, then include transactions starting on the given timestamp.
+    list-accounts [options]
+    
+    Options:
 
-- `--end-date=YYYY-mm-dd[THH:MM:SS]`
-
-  If provided, then include transactions before (but not including) the given
-  timestamp.
+        --start-date=YYYY-mm-dd[THH:MM:SS]  If provided, include transactions
+                                            starting on the givin timestamp.
+        --end-date=YYYY-mm-dd[THH:MM:SS]    If provided, include transactions
+                                            before (but not including) the
+                                            given timestamp.
 
 
 ### Authentication ###
