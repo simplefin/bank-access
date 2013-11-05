@@ -21,10 +21,9 @@ In this document, the following terms are used interchangeably:
 
 # Goal #
 
-We want to deprecate this repository when the banks implement SimpleFIN.  These scripts exist
-as a bridge from banks which don't implement SimpleFIN to tools which
-expect SimpleFIN.  It is our hope that eventually, all banks will implement
-SimpleFIN, which will render this repository useless.
+We want the banks to implement SimpleFIN, so we won't need this repository.
+These scripts exist as a bridge from banks which don't implement SimpleFIN to
+tools which expect SimpleFIN.  
 
 Please contribute a script for your banks!
 
@@ -155,12 +154,9 @@ The format of stderr is not defined.
 
 ### auth (OUT, channel 3) ###
 
-In addition to the standard I/O channels, each Bank Access script may also
-write to channel 3, which is used for authentication.  When, during the course
-of connecting to a bank, a script requires information from the runner of the
-script (such as a username, password, security question answer, etc...), the
-script will write a JSON string followed by a newline (byte 0x0A) to channel 3
-in the following format:
+If a script needs information from its parent (the thing that ran it or spawned
+it) such as username, password, security question, etc. it would write a JSON
+string followed by a newline (byte 0xA) to channel 3 in the following format:
 
     <JSON key>\n
 
@@ -173,7 +169,7 @@ Which is a string of these bytes (in hexadecimal):
     
     22 55 73 65 72 6E 61 6D 65 22 0A
 
-The runner of the script would then write the username followed by a newline
+The parent would then write the username followed by a newline
 on stdin like this (note the double quotes):
 
     "bob_the_user"
