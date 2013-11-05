@@ -6,7 +6,7 @@ See LICENSE for details.
 This repository contains a collection of scripts that can be used to
 programmatically get bank transaction information.  The scripts herein:
 
-1. Do not mutate the financial state of a bank (like doing a transfer).
+1. Do not change the financial state of a bank (such as doing a transfer).
 
 2. Provide a consistent interface (see below).
 
