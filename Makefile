@@ -18,4 +18,6 @@ pep8:
 clean:
 	-find . -name "*.pyc" -exec rm {} \;
 	-rm .coverage
+	-rm .coverage.*
+	-rm -r htmlcov
 

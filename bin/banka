@@ -5,7 +5,8 @@ import argparse
 
 from banka.cli import wrap3
 
-if __name__ == '__main__':
+
+def main():
     parser = argparse.ArgumentParser()
     subs = parser.add_subparsers(help='sub-command help', dest='command')
     
@@ -15,3 +16,6 @@ if __name__ == '__main__':
     args = parser.parse_args()
     if args.command == 'wr':
         wrap3(args.args)
+
+if __name__ == '__main__':
+    main()
