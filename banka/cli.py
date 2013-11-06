@@ -1,6 +1,5 @@
 # Copyright (c) The SimpleFIN Team
 # See LICENSE for details.
-
 import sys
 import getpass
 from functools import partial
