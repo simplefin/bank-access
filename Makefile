@@ -6,8 +6,13 @@
 
 test:
 	coverage run $$(which trial) banka
+	-mv _trial_temp/.coverage.* .
+	coverage combine
 	coverage report --fail-under 100
-	pyflakes banka
+	pyflakes banka bin/banka
+	$(MAKE) pep8
+
+pep8:
 	pep8 --show-source --show-pep8 banka
 
 clean:

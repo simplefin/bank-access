@@ -2,3 +2,5 @@ _trial_temp
 *.pyc
 build
 .coverage
+.coverage.*
+htmlcov/

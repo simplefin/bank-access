@@ -79,9 +79,7 @@ class wrap3PromptTest(TestCase):
 
     def test_basic(self):
         """
-        wrap3Prompt should return a function that, when called with a proto
-        and line, will call the prompt function then write the result
-        to stdin of the proto
+        wrap3Prompt
         """
         proto = MagicMock()
         proto.transport = MagicMock()
@@ -91,10 +89,11 @@ class wrap3PromptTest(TestCase):
         def getpass(prompt):
             prompts.append(prompt)
             return 'hey'
-        wrap3Prompt(getpass, proto, 'a line of data')
-        self.assertEqual(prompts, ['a line of data'], "Should call the prompt "
-                         "function with the prompt received")
-        proto.transport.write.assert_called_once_with('hey\n')
+        wrap3Prompt(getpass, proto, '{"key":"name"}\n')
+
+        self.assertEqual(prompts, ['name'], "Should call the prompt "
+                         "function with the key received")
+        proto.transport.write.assert_called_once_with('"hey"\n')
 
     def test_deferred(self):
         """
@@ -108,6 +107,6 @@ class wrap3PromptTest(TestCase):
         def getpass(prompt):
             prompts.append(prompt)
             return defer.succeed('hey')
-        wrap3Prompt(getpass, proto, 'a line of data')
-        self.assertEqual(prompts, ['a line of data'])
-        proto.transport.write.assert_called_once_with('hey\n')
+        wrap3Prompt(getpass, proto, '{"key":"name"}\n')
+        self.assertEqual(prompts, ['name'])
+        proto.transport.write.assert_called_once_with('"hey"\n')

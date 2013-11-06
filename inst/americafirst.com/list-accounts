@@ -1,0 +1,22 @@
+#!/usr/bin/env python
+# Copyright (c) The SimpleFIN Team
+# See LICENSE for details.
+from banka.args import listAccountsParser
+from banka.prompt import prompt
+import sys
+
+
+
+
+def main(args):
+	parser = listAccountsParser()
+	args = parser.parse_args(args)
+	start_date = args.start_date
+	end_date = args.end_date
+
+	r = prompt('John')
+	print r
+
+
+if __name__ == '__main__':
+	main(sys.argv[1:])

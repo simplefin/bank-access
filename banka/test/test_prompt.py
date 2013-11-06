@@ -17,17 +17,15 @@ class PrompterTest(TestCase):
         self.assertEqual(p.reader, readFromStdin)
         self.assertEqual(p.writer, writeTo3)
 
-    def test_works(self):
+    def test_simple(self):
         """
-        A prompter will write prompts using writePrompt and read data using
-        readAnswer.
+        If a single argument is provided, then it is the key of the prompt,
+        and will be written using the writer method.
         """
         writer = []
         reader = MagicMock(return_value='something')
         p = _Prompter(writer.append, reader)
-        self.assertEqual(p.writer, writer.append)
-        self.assertEqual(p.reader, reader)
         r = p.prompt('foo')
-        self.assertEqual(writer, ['foo'])
+        self.assertEqual(writer, [{"key": "foo"}])
         reader.assert_called_once_with()
         self.assertEqual(r, 'something')

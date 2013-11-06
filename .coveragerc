@@ -1,6 +1,7 @@
 [run]
 branch = True
 source = banka
+parallel = True
 omit =
     */test/*
 

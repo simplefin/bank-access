@@ -1,6 +1,7 @@
 # Copyright (c) The SimpleFIN Team
 # See LICENSE for details.
 from StringIO import StringIO
+import json
 from twisted.internet.protocol import ProcessProtocol
 from twisted.internet import defer
 
@@ -46,17 +47,19 @@ class Wrap3Protocol(ProcessProtocol):
             self.done.errback(status)
 
 
-def wrap3Prompt(getpass_fn, proto, prompt):
+def wrap3Prompt(getpass_fn, proto, line):
     """
-    @param getpass_fn: A function that will be called with a prompt and is
-        expected to return an answer.
+    @param getpass_fn: A function that will be called with a string prompt and
+        is expected to return a string answer.
     @param proto: A L{ProcessProtocol} instance whose stdin will receive the
         answer to this prompt.
-    @param prompt: String prompt
+    @param line: Line of data containing some JSON.
     """
+    data = json.loads(line)
+    prompt = data['key']
     d = defer.maybeDeferred(getpass_fn, prompt)
 
     def _gotAnswer(answer, proto):
-        proto.transport.write(answer + '\n')
+        proto.transport.write(json.dumps(answer) + '\n')
 
     d.addCallback(_gotAnswer, proto)
