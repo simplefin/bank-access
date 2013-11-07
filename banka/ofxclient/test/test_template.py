@@ -3,7 +3,7 @@
 from twisted.trial.unittest import TestCase
 
 import difflib
-from datetime import datetime
+from datetime import datetime, date
 
 from ofxparse.ofxparse import OfxParser
 
@@ -93,6 +93,89 @@ NEWFILEUID:NONE
         </ACCTINFORQ>
     </ACCTINFOTRNRQ>
 </SIGNUPMSGSRQV1>
+</OFX>
+'''
+        self.assertBlobsEqual(expected, body)
+        self.assertEqual(type(body), str, "Should be a string, not unicode")
+
+    def test_accountStatements(self):
+        """
+        You should be able to generate the body of a request for getting
+        account statements.
+        """
+        trans = ['2222', '2223']
+        maker = OFX103RequestMaker(
+            transaction_id_generator=lambda: trans.pop(0),
+            _now=lambda: 'CURRENT_TIME')
+        body = maker.accountStatements('Org', '4444', '1111', 'password', [
+            {
+                'account_number': 'ac3333',
+                'account_type': 'SAVINGS',
+                'routing_number': '99999',
+            },
+            {
+                'account_number': 'ac5555',
+                'account_type': 'CHECKING',
+                'routing_number': '88888',
+            },
+        ], date(2001, 1, 1), date(2004, 2, 3))
+        expected = '''OFXHEADER:100
+DATA:OFXSGML
+VERSION:103
+SECURITY:NONE
+ENCODING:USASCII
+CHARSET:1252
+COMPRESSION:NONE
+OLDFILEUID:NONE
+NEWFILEUID:NONE
+
+<OFX>
+<SIGNONMSGSRQV1>
+    <SONRQ>
+        <DTCLIENT>CURRENT_TIME
+        <USERID>1111
+        <USERPASS>password
+        <LANGUAGE>ENG
+        <FI>
+            <ORG>Org
+            <FID>4444
+        </FI>
+        <APPID>QWIN
+        <APPVER>1800
+    </SONRQ>
+</SIGNONMSGSRQV1>
+<BANKMSGSRQV1>
+    <STMTTRNRQ>
+        <TRNUID>2222
+        <STMTRQ>
+            <BANKACCTFROM>
+                <BANKID>99999
+                <ACCTID>ac3333
+                <ACCTTYPE>SAVINGS
+            </BANKACCTFROM>
+            <INCTRAN>
+                <DTSTART>20010101
+                <DTEND>20040203
+                <INCLUDE>Y
+            </INCTRAN>
+        </STMTRQ>
+    </STMTTRNRQ>
+    <STMTTRNRQ>
+        <TRNUID>2223
+        <STMTRQ>
+            <BANKACCTFROM>
+                <BANKID>88888
+                <ACCTID>ac5555
+                <ACCTTYPE>CHECKING
+            </BANKACCTFROM>
+            <INCTRAN>
+                <DTSTART>20010101
+                <DTEND>20040203
+                <INCLUDE>Y
+            </INCTRAN>
+        </STMTRQ>
+    </STMTTRNRQ>
+</BANKMSGSRQV1>
 </OFX>
 '''
         self.assertBlobsEqual(expected, body)

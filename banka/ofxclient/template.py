@@ -70,3 +70,25 @@ class OFX103RequestMaker(object):
         template = self.jinja_env.get_template('accountInfo')
         # XXX should this be utf-8 when the header specifies USASCII?
         return template.render(params).encode('utf-8')
+
+    def accountStatements(self, fi_org, fi_id, user_login, user_password,
+                          accounts, start_date, end_date):
+        """
+        Generate a request body for requesting account transactions.
+        """
+        for account in accounts:
+            account['ofx_trans_id'] = self.makeTransId()
+        params = {
+            'now': self.now(),
+            'app_id': self.app_id,
+            'app_version': self.app_version,
+            'user_login': user_login,
+            'user_password': user_password,
+            'fi_org': fi_org,
+            'fi_id': fi_id,
+            'accounts': accounts,
+            'start_date': start_date.strftime('%Y%m%d'),
+            'end_date': end_date.strftime('%Y%m%d'),
+        }
+        template = self.jinja_env.get_template('accountStatements')
+        return template.render(params).encode('utf-8')

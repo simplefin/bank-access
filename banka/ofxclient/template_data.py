@@ -47,9 +47,35 @@ v103_accountInfo = '''{% extends 'base' %}
     </ACCTINFOTRNRQ>
 </SIGNUPMSGSRQV1>{% endblock %}'''
 
+v103_statementRequest = '''<STMTTRNRQ>
+        <TRNUID>{{ account.ofx_trans_id }}
+        <STMTRQ>
+            <BANKACCTFROM>
+                <BANKID>{{ account.routing_number }}
+                <ACCTID>{{ account.account_number }}
+                <ACCTTYPE>{{ account.account_type }}
+            </BANKACCTFROM>
+            <INCTRAN>
+                <DTSTART>{{ start_date }}
+                <DTEND>{{ end_date }}
+                <INCLUDE>Y
+            </INCTRAN>
+        </STMTRQ>
+    </STMTTRNRQ>'''
+
+v103_accountStatements = '''{% extends 'base' %}
+
+{% block body %}{% include 'signon' %}
+<BANKMSGSRQV1>{% for account in accounts %}
+    {% include 'statementRequest' %}{% endfor %}
+</BANKMSGSRQV1>{% endblock %}
+'''
+
 v103_templates = {
     'base': v103_base,
     'signon': v103_signon,
     'accountInfo': v103_accountInfo,
+    'accountStatements': v103_accountStatements,
+    'statementRequest': v103_statementRequest,
 }
 v103 = DictLoader(v103_templates)
