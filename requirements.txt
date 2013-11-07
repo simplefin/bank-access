@@ -2,3 +2,4 @@ argparse==1.2.1
 mechanize==0.2.5
 beautifulsoup4==4.3.2
 Twisted==13.1.0
+Jinja2==2.7.1

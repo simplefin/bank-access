@@ -1,7 +1,7 @@
 # Copyright (c) The SimpleFIN Team
 # See LICENSE for details.
 
-.phony: test clean
+.phony: test clean test-copyright
 
 
 test:
@@ -11,6 +11,7 @@ test:
 	coverage report --fail-under 100
 	pyflakes banka bin/banka
 	$(MAKE) pep8
+	$(MAKE) test-copyright
 
 pep8:
 	pep8 --show-source --show-pep8 banka
@@ -21,3 +22,5 @@ clean:
 	-rm .coverage.*
 	-rm -r htmlcov
 
+test-copyright:
+	@bash util/assertcopyright.sh
