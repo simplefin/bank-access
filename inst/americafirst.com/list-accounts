@@ -3,20 +3,74 @@
 # See LICENSE for details.
 from banka.args import listAccountsParser
 from banka.prompt import prompt
+from banka.ofxclient.template import OFX103RequestMaker
+from ofxparse.ofxparse import OfxParser
+from StringIO import StringIO
+import yaml
+import requests
 import sys
+import os
 
 
+def connectionDetails():
+    """
+    Acquire the connection details by prompting and reading the _identity
+    file.
 
+    @return: A dictionary suitable for logging in.
+    """
+    identity = os.path.abspath(os.path.join(__file__, '../_identity'))
+    fh = open(identity, 'rb')
+    info = yaml.load(fh)
+
+    url = info['ofx_root_url']
+    fi_id = info['ofx_fi_id']
+    fi_org = info['ofx_fi_org']
+
+    user_login = prompt('_login')
+    user_password = prompt('password')
+
+    return {
+        'url': url,
+        'fi_org': fi_org,
+        'fi_id': fi_id,
+        'user_login': user_login,
+        'user_password': user_password,
+    }
+
+def listAccounts(cargs):
+    """
+    Get a list of the bank accounts available to this login.
+    """
+    maker = OFX103RequestMaker()
+    payload = maker.accountInfo(cargs['fi_org'], cargs['fi_id'],
+                                cargs['user_login'], cargs['user_password'])
+    headers = maker.httpHeaders()
+
+    response = requests.post(cargs['url'], data=payload, headers=headers)
+
+    fh = StringIO(response.text)
+    ofx = OfxParser.parse(fh)
+    return ofx.accounts
+
+def requestStatements(cargs, accounts):
+    """
+    Get the statements for several accounts.
+
+    @param accounts: A list of C{ofxparse.Account}s.
+    """
+    for account in accounts:
+        print account.desc
 
 def main(args):
-	parser = listAccountsParser()
-	args = parser.parse_args(args)
-	start_date = args.start_date
-	end_date = args.end_date
+    parser = listAccountsParser()
+    args = parser.parse_args(args)
+    start_date = args.start_date
+    end_date = args.end_date
 
-	r = prompt('John')
-	print r
-
+    conn_args = connectionDetails()
+    accounts = listAccounts(conn_args)
+    statements = requestStatements(conn_args, accounts)
 
 if __name__ == '__main__':
-	main(sys.argv[1:])
+    main(sys.argv[1:])

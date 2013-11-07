@@ -56,7 +56,7 @@ def wrap3Prompt(getpass_fn, proto, line):
     @param line: Line of data containing some JSON.
     """
     data = json.loads(line)
-    prompt = data['key']
+    prompt = '%s? ' % (data['key'],)
     d = defer.maybeDeferred(getpass_fn, prompt)
 
     def _gotAnswer(answer, proto):

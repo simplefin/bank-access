@@ -5,3 +5,4 @@ Twisted==13.1.0
 Jinja2==2.7.1
 ofxparse==0.14
 requests==2.0.1
+PyYAML==3.10
