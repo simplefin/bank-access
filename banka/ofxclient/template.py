@@ -40,6 +40,14 @@ class OFX103RequestMaker(object):
         """
         return str(uuid4()).replace('-', '')
 
+    def httpHeaders(self):
+        """
+        Get the headers for an HTTP request.
+        """
+        return {
+            'Content-Type': 'application/x-ofx',
+        }
+
     def accountInfo(self, fi_org, fi_id, user_login, user_password):
         """
         Generate a request body for requesting an account listing.

@@ -20,6 +20,18 @@ def diffText(a, b, nameA=None, nameB=None):
 
 class OFX103RequestMakerTest(TestCase):
 
+    def assertBlobsEqual(self, expected, actual):
+        self.assertEqual(expected, actual, 'Difference:\n%s' % (
+                         diffText(expected, actual, 'expected', 'actual')))
+
+    def test_httpHeaders(self):
+        """
+        Should have content-type set
+        """
+        maker = OFX103RequestMaker()
+        headers = maker.httpHeaders()
+        self.assertEqual(headers['Content-Type'], 'application/x-ofx')
+
     def test_now(self):
         """
         By default, the now function should return the current UTC time.
@@ -40,10 +52,6 @@ class OFX103RequestMakerTest(TestCase):
         a = maker.makeTransId()
         b = maker.makeTransId()
         self.assertNotEqual(a, b, "Should be different")
-
-    def assertBlobsEqual(self, expected, actual):
-        self.assertEqual(expected, actual, 'Difference:\n%s' % (
-                         diffText(expected, actual, 'expected', 'actual')))
 
     def test_accountInfo(self):
         """
