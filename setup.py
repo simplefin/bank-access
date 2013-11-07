@@ -12,6 +12,7 @@ setup(
     version='0.1',
     packages=[
         'banka', 'banka.test',
+        'banka.ofxclient', 'banka.ofxclient.test',
     ],
     scripts=[
         'bin/banka',
