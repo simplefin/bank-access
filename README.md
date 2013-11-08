@@ -282,11 +282,10 @@ The script must conform to this usage description:
     
     Options:
 
-        --start-date=YYYY-mm-dd[THH:MM:SS]  If provided, include transactions
-                                            starting on the givin timestamp.
-        --end-date=YYYY-mm-dd[THH:MM:SS]    If provided, include transactions
-                                            before (but not including) the
-                                            given timestamp.
+        --start-date=YYYY-mm-dd   If provided, include transactions starting
+                                  on the given date.
+        --end-date=YYYY-mm-dd     If provided, include transactions on or
+                                  before the given date (XXX sure?)
 
 
 ### Authentication ###

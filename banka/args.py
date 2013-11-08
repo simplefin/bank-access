@@ -24,11 +24,18 @@ def strToDatetime(s):
     raise argparse.ArgumentTypeError('Could not convert %r to datetime' % (s,))
 
 
+def strToDate(s):
+    """
+    Convert a string to a C{date}.
+    """
+    return strToDatetime(s).date()
+
+
 def listAccountsParser():
     """
     Get an argument parser suitable for a list-accounts script.
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument('--start-date', dest='start_date', type=strToDatetime)
-    parser.add_argument('--end-date', dest='end_date', type=strToDatetime)
+    parser.add_argument('--start-date', dest='start_date', type=strToDate)
+    parser.add_argument('--end-date', dest='end_date', type=strToDate)
     return parser

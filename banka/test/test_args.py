@@ -2,7 +2,7 @@
 # See LICENSE for details.
 
 from unittest import TestCase
-from datetime import datetime
+from datetime import datetime, date
 import argparse
 
 from banka.args import strToDatetime, listAccountsParser
@@ -46,7 +46,7 @@ class listAccountsParserTest(TestCase):
         """
         parser = listAccountsParser()
         args = parser.parse_args(['--start-date', '2001-01-01'])
-        self.assertEqual(args.start_date, datetime(2001, 1, 1))
+        self.assertEqual(args.start_date, date(2001, 1, 1))
 
     def test_end_date(self):
         """
@@ -54,4 +54,4 @@ class listAccountsParserTest(TestCase):
         """
         parser = listAccountsParser()
         args = parser.parse_args(['--end-date', '2001-02-02'])
-        self.assertEqual(args.end_date, datetime(2001, 2, 2))
+        self.assertEqual(args.end_date, date(2001, 2, 2))
