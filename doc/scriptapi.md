@@ -1,3 +1,7 @@
+<!--
+Copyright (c) The SimpleFIN Team
+See LICENSE for details.
+-->
 
 The structure of this repository is as follows:
 
