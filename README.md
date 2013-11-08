@@ -66,20 +66,16 @@ one!  Follow [CONTRIBUTING.md](CONTRIBUTING.md) and do these steps:
 3. Submit a pull request.
 
 
-# Writing a Script #
-
-
-
 # Methods of Bridging #
 
-The method a script uses to bridge between a bank and SimpleFIN depends on
-what the bank makes available.  In order of preference, try the following when
+The method used to bridge between a bank and SimpleFIN depends on what the bank
+makes available.  In order of preference, try the following when
 writing a script for this repository:
 
 1. OFX Server
 
-   If the bank provides an OFX service, there (XXX will be) are utility scripts
-   that will make connecting to that bank very easy.
+   Check www.ofxhome.com to see if your bank provides an OFX server.  If so,
+   writing a script may be pretty easy.
 
 2. OFX file download
 
@@ -107,5 +103,33 @@ writing a script for this repository:
    * in the event that further authentication is required, either horse, rider
    or buggy may use services available (such as a telegraph or pigeon) to
    contact the running script for the required information.
+
+
+# Writing a Script #
+
+First, determine the best [method of bridging](#methods-of-bridging) for your
+bank.
+
+
+## Running your script during debugging ##
+
+Run your script with the credential wrapper:
+
+    banka run path/to/your/script
+
+
+
+## Asking for credentials ##
+
+Your script should prompt for credentials.  If you are writing a Python script,
+prompt for credentials using `banka.prompt.prompt` like this:
+
+    from banka.prompt import prompt
+    username = prompt('_login')
+    password_or_pin = prompt('password')
+
+**All scripts must** prompt for the specially named `_login` credential
+**first.**
+
 
 
