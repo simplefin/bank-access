@@ -10,6 +10,9 @@ from banka.wrap3 import Wrap3Protocol, wrap3Prompt
 def wrap3(args):
     """
     Spawn a process and reroute channel 3 to getpass calls.
+
+    @param args: List of commandline arguments (the first one is an
+        executable)
     """
     from twisted.internet.task import react
     return react(_wrap3, [args])

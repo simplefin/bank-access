@@ -103,20 +103,24 @@ NEWFILEUID:NONE
         You should be able to generate the body of a request for getting
         account statements.
         """
-        trans = ['2222', '2223']
+        trans = ['2222', '2223', '2224']
         maker = OFX103RequestMaker(
             transaction_id_generator=lambda: trans.pop(0),
             _now=lambda: 'CURRENT_TIME')
         body = maker.accountStatements('Org', '4444', '1111', 'password', [
             {
                 'account_number': 'ac3333',
-                'account_type': 'SAVINGS',
+                'account_type_string': 'SAVINGS',
                 'routing_number': '99999',
             },
             {
                 'account_number': 'ac5555',
-                'account_type': 'CHECKING',
+                'account_type_string': 'CHECKING',
                 'routing_number': '88888',
+            },
+            {
+                'account_number': 'cc7777',
+                'account_type': 'creditcard',
             },
         ], date(2001, 1, 1), date(2004, 2, 3))
         expected = '''OFXHEADER:100
@@ -176,7 +180,62 @@ NEWFILEUID:NONE
         </STMTRQ>
     </STMTTRNRQ>
 </BANKMSGSRQV1>
+<CREDITCARDMSGSRQV1>
+    <CCSTMTTRNRQ>
+        <TRNUID>2224
+        <CCSTMTRQ>
+            <CCACCTFROM>
+                <ACCTID>cc7777
+            </CCACCTFROM>
+            <INCTRAN>
+                <DTSTART>20010101
+                <DTEND>20040203
+                <INCLUDE>Y
+            </INCTRAN>
+        </CCSTMTRQ>
+    </CCSTMTTRNRQ>
+</CREDITCARDMSGSRQV1>
 </OFX>
 '''
         self.assertBlobsEqual(expected, body)
         self.assertEqual(type(body), str, "Should be a string, not unicode")
+
+    def test_accountStatements_noCreditcards(self):
+        """
+        If there are no credit cards, there should be no <CREDITCARDMSGSRQV1>
+        section.
+        """
+        trans = ['2222', '2223', '2224']
+        maker = OFX103RequestMaker(
+            transaction_id_generator=lambda: trans.pop(0),
+            _now=lambda: 'CURRENT_TIME')
+        body = maker.accountStatements('Org', '4444', '1111', 'password', [
+            {
+                'account_number': 'ac3333',
+                'account_type_string': 'SAVINGS',
+                'routing_number': '99999',
+            },
+            {
+                'account_number': 'ac5555',
+                'account_type_string': 'CHECKING',
+                'routing_number': '88888',
+            },
+        ], date(2001, 1, 1), date(2004, 2, 3))
+        self.assertNotIn('<CREDITCARDMSGSRQV1>', body)
+
+    def test_accountStatements_noBankAccounts(self):
+        """
+        If there are no bank accounts (only credit cards) there should be no
+        <BANKMSGSRQV1> section.
+        """
+        trans = ['2222', '2223', '2224']
+        maker = OFX103RequestMaker(
+            transaction_id_generator=lambda: trans.pop(0),
+            _now=lambda: 'CURRENT_TIME')
+        body = maker.accountStatements('Org', '4444', '1111', 'password', [
+            {
+                'account_number': 'cc7777',
+                'account_type': 'creditcard',
+            },
+        ], date(2001, 1, 1), date(2004, 2, 3))
+        self.assertNotIn('<BANKMSGSRQV1>', body)

@@ -47,9 +47,9 @@ Install `banka`:
 
 then run the script like this:
 
-    banka wr inst/bankA.com/list-accounts
+    banka run inst/bankA.com/list-accounts
 
-`banka wr inst/bankA.com/list-accounts` is nearly equivalent to just doing
+`banka run inst/bankA.com/list-accounts` is nearly equivalent to just doing
 `inst/bankA.com/list-accounts` with the added benefit that sensitive data typed
 in to the terminal is not shown.  If you aren't using a terminal to run this
 script (e.g. you are spawning this from within another process), you can just

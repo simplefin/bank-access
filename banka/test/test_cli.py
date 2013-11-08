@@ -64,7 +64,7 @@ class wrap3Test(TestCase):
         env['COVERAGE_PROCESS_START'] = os.path.abspath('../.coveragerc')
         proto = StdinProtocol(['joe\n'])
         reactor.spawnProcess(proto, '../bin/banka',
-                             ['banka', 'wr', script_file.path],
+                             ['banka', 'run', script_file.path],
                              env=env, usePTY=True)
 
         def check(result):
@@ -88,7 +88,7 @@ class wrap3Test(TestCase):
         env['COVERAGE_PROCESS_START'] = os.path.abspath('../.coveragerc')
         proto = StdinProtocol([])
         reactor.spawnProcess(proto, '../bin/banka',
-                             ['banka', 'wr', script_file.path],
+                             ['banka', 'run', script_file.path],
                              env=env)
 
         def check(result):

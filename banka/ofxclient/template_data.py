@@ -53,7 +53,7 @@ v103_statementRequest = '''<STMTTRNRQ>
             <BANKACCTFROM>
                 <BANKID>{{ account.routing_number }}
                 <ACCTID>{{ account.account_number }}
-                <ACCTTYPE>{{ account.account_type }}
+                <ACCTTYPE>{{ account.account_type_string }}
             </BANKACCTFROM>
             <INCTRAN>
                 <DTSTART>{{ start_date }}
@@ -63,12 +63,29 @@ v103_statementRequest = '''<STMTTRNRQ>
         </STMTRQ>
     </STMTTRNRQ>'''
 
+v103_creditcardStatementRequest = '''<CCSTMTTRNRQ>
+        <TRNUID>{{ account.ofx_trans_id }}
+        <CCSTMTRQ>
+            <CCACCTFROM>
+                <ACCTID>{{ account.account_number }}
+            </CCACCTFROM>
+            <INCTRAN>
+                <DTSTART>{{ start_date }}
+                <DTEND>{{ end_date }}
+                <INCLUDE>Y
+            </INCTRAN>
+        </CCSTMTRQ>
+    </CCSTMTTRNRQ>'''
+
 v103_accountStatements = '''{% extends 'base' %}
 
 {% block body %}{% include 'signon' %}
-<BANKMSGSRQV1>{% for account in accounts %}
+{% if bank_accounts %}<BANKMSGSRQV1>{% for account in bank_accounts %}
     {% include 'statementRequest' %}{% endfor %}
-</BANKMSGSRQV1>{% endblock %}
+</BANKMSGSRQV1>{% endif %}
+{% if creditcards %}<CREDITCARDMSGSRQV1>{% for account in creditcards %}
+    {% include 'creditcardStatementRequest' %}{% endfor %}
+</CREDITCARDMSGSRQV1>{% endif %}{% endblock %}
 '''
 
 v103_templates = {
@@ -77,5 +94,6 @@ v103_templates = {
     'accountInfo': v103_accountInfo,
     'accountStatements': v103_accountStatements,
     'statementRequest': v103_statementRequest,
+    'creditcardStatementRequest': v103_creditcardStatementRequest,
 }
 v103 = DictLoader(v103_templates)

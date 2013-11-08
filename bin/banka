@@ -1,21 +1,36 @@
 #!/usr/bin/env python
 # Copyright (c) The SimpleFIN Team
 # See LICENSE for details.
-import argparse
+from twisted.python import usage
 
 from banka.cli import wrap3
 
 
+class RunOptions(usage.Options):
+
+    synopsis = 'cmd [arg ...]'
+
+    def parseArgs(self, *args):
+        self['args'] = args
+
+
+class Options(usage.Options):
+
+    subCommands = [
+        ('run', None, RunOptions, 'Run a process that prompts for sensitive '
+                                  'information on fd 3.')
+    ]
+
+
 def main():
-    parser = argparse.ArgumentParser()
-    subs = parser.add_subparsers(help='sub-command help', dest='command')
-    
-    wr = subs.add_parser('wr', help='wr help')
-    wr.add_argument('args', metavar='arg', nargs='+',
-                     help='command-line args')
-    args = parser.parse_args()
-    if args.command == 'wr':
-        wrap3(args.args)
+    options = Options()
+    options.parseOptions()
+
+    if options.subCommand == 'run':
+        wrap3(options.subOptions['args'])
+    else:
+        print options
+
 
 if __name__ == '__main__':
     main()

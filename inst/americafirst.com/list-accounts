@@ -38,6 +38,7 @@ def connectionDetails():
         'user_password': user_password,
     }
 
+
 def listAccounts(cargs):
     """
     Get a list of the bank accounts available to this login.
@@ -53,14 +54,48 @@ def listAccounts(cargs):
     ofx = OfxParser.parse(fh)
     return ofx.accounts
 
-def requestStatements(cargs, accounts):
+
+def requestStatements(cargs, accounts, start_date, end_date):
     """
     Get the statements for several accounts.
 
     @param accounts: A list of C{ofxparse.Account}s.
+    @param start_date: start C{date}
+    @param end_date: end C{date}
     """
+    dict_accounts = []
     for account in accounts:
-        print account.desc
+        if account.type == 1:
+            # normal bank account
+            dict_accounts.append({
+                'routing_number': account.routing_number,
+                'account_number': account.account_id,
+                'account_type_string': account.account_type,
+            })
+        elif account.type == 2:
+            # credit card
+            dict_accounts.append({
+                'account_number': account.account_id,
+                'account_type': 'creditcard',
+            })
+
+    maker = OFX103RequestMaker()
+    payload = maker.accountStatements(cargs['fi_org'], cargs['fi_id'],
+                                      cargs['user_login'],
+                                      cargs['user_password'],
+                                      dict_accounts,
+                                      start_date, end_date)
+    headers = maker.httpHeaders()
+
+    response = requests.post(cargs['url'], data=payload, headers=headers)
+
+    assert response.status_code == 200, '%r %r: %r' % (response,
+                                response.status_code, response.text)
+
+    fh = StringIO(response.text)
+    ofx = OfxParser.parse(fh)
+    return ofx
+
 
 def main(args):
     parser = listAccountsParser()
@@ -70,7 +105,8 @@ def main(args):
 
     conn_args = connectionDetails()
     accounts = listAccounts(conn_args)
-    statements = requestStatements(conn_args, accounts)
+    statements = requestStatements(conn_args, accounts, start_date, end_date)
+
 
 if __name__ == '__main__':
     main(sys.argv[1:])

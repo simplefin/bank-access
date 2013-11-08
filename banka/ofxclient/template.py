@@ -76,8 +76,14 @@ class OFX103RequestMaker(object):
         """
         Generate a request body for requesting account transactions.
         """
+        bank_accounts = []
+        creditcards = []
         for account in accounts:
             account['ofx_trans_id'] = self.makeTransId()
+            if account.get('account_type', 'bank_account') == 'bank_account':
+                bank_accounts.append(account)
+            else:
+                creditcards.append(account)
         params = {
             'now': self.now(),
             'app_id': self.app_id,
@@ -86,7 +92,8 @@ class OFX103RequestMaker(object):
             'user_password': user_password,
             'fi_org': fi_org,
             'fi_id': fi_id,
-            'accounts': accounts,
+            'bank_accounts': bank_accounts,
+            'creditcards': creditcards,
             'start_date': start_date.strftime('%Y%m%d'),
             'end_date': end_date.strftime('%Y%m%d'),
         }
