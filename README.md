@@ -33,7 +33,7 @@ And please contribute a script for your banks!
 
 ## If you see your bank listed ##
 
-If you see your bank listed in the `inst` directory, clone this repo,
+If you see your bank listed in the [`inst` directory](inst/), clone this repo,
 install any dependencies:
 
     pip install -r requirements.txt
@@ -55,7 +55,7 @@ call `inst/bankA.com/list-accounts`
 
 ## If you don't see your bank listed ##
 
-If you don't see your bank listed in the [inst directory](inst/), please contribute
+If you don't see your bank listed in the [`inst` directory](inst/), please contribute
 one!  Follow [CONTRIBUTING.md](CONTRIBUTING.md) and do these steps:
 
 1. Fork this repo.
