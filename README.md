@@ -55,7 +55,7 @@ call `inst/bankA.com/list-accounts`
 
 ## If you don't see your bank listed ##
 
-If you don't see your bank listed in the [`inst` directory](/inst), please contribute
+If you don't see your bank listed in the [inst directory](inst/), please contribute
 one!  Follow [CONTRIBUTING.md](CONTRIBUTING.md) and do these steps:
 
 1. Fork this repo.
