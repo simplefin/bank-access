@@ -7,9 +7,15 @@ from banka.ofxclient.template import OFX103RequestMaker
 from ofxparse.ofxparse import OfxParser
 from StringIO import StringIO
 import yaml
+import json
 import requests
 import sys
 import os
+
+
+def log(msg):
+    sys.stderr.write('%s\n' % (msg,))
+    sys.stderr.flush()
 
 
 def connectionDetails():
@@ -19,6 +25,7 @@ def connectionDetails():
 
     @return: A dictionary suitable for logging in.
     """
+    log("Gathering connection details")
     identity = os.path.abspath(os.path.join(__file__, '../_identity'))
     fh = open(identity, 'rb')
     info = yaml.load(fh)
@@ -36,6 +43,7 @@ def connectionDetails():
         'fi_id': fi_id,
         'user_login': user_login,
         'user_password': user_password,
+        'domain': info.get('domain'),
     }
 
 
@@ -43,6 +51,7 @@ def listAccounts(cargs):
     """
     Get a list of the bank accounts available to this login.
     """
+    log("Listing accounts")
     maker = OFX103RequestMaker()
     payload = maker.accountInfo(cargs['fi_org'], cargs['fi_id'],
                                 cargs['user_login'], cargs['user_password'])
@@ -63,6 +72,7 @@ def requestStatements(cargs, accounts, start_date, end_date):
     @param start_date: start C{date}
     @param end_date: end C{date}
     """
+    log("Requesting statements")
     dict_accounts = []
     for account in accounts:
         if account.type == 1:
@@ -97,6 +107,61 @@ def requestStatements(cargs, accounts, start_date, end_date):
     return ofx
 
 
+def statementsToDict(cargs, statements):
+    """
+    Convert the result of an OfxParser to a dictionary.
+    """
+    log("Converting statements")
+    data = {}
+    accounts = []
+    for account in statements.accounts:
+        stmt = account.statement
+        balance_transaction = None
+        last_transaction_date = None
+        transactions = []
+        if stmt.transactions:
+            t = stmt.transactions[-1]
+            balance_transaction = t.id
+            last_transaction_date = t.date
+        for t in stmt.transactions:
+            transactions.append({
+                'id': t.id,
+                'posted': t.date,
+                'amount': str(t.amount),
+                'description': t.memo,
+            })
+        d = {
+            'org': {
+                'domain': cargs['domain'],
+                'sfin-url': None,
+            },
+            '_insecure_id': account.account_id,
+            "name": account.account_type,
+            "currency": stmt.currency,
+            "balance": str(stmt.balance),
+            "available-balance": str(stmt.available_balance),
+            "balance-as-of": balance_transaction,
+            "last-transaction-posted": last_transaction_date,
+            "transactions": transactions,
+        }
+        accounts.append(d)
+    return {
+        'accounts': accounts,
+    }
+
+
+def _dateJson(obj):
+    try:
+        return obj.isoformat()
+    except:
+        pass
+    raise TypeError("Can not serialize %r" % (obj,))
+
+
+def toJson(obj):
+    return json.dumps(obj, default=_dateJson)
+
+
 def main(args):
     parser = listAccountsParser()
     args = parser.parse_args(args)
@@ -106,6 +171,9 @@ def main(args):
     conn_args = connectionDetails()
     accounts = listAccounts(conn_args)
     statements = requestStatements(conn_args, accounts, start_date, end_date)
+    d = statementsToDict(conn_args, statements)
+    log(d)
+    print toJson(d)
 
 
 if __name__ == '__main__':
