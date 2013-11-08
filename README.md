@@ -61,12 +61,12 @@ one!  Follow [CONTRIBUTING.md](CONTRIBUTING.md) and do these steps:
 1. Fork this repo.
 
 2. Make a directory for your institution, complete with an `_identity` file
-   and `list-accounts` script. (See [Writing a Script][writing-a-script] below).
+   and `list-accounts` script. (See [Writing a Script](#writing-a-script)).
 
 3. Submit a pull request.
 
 
-# [writing-a-script]: Writing a Script #
+# Writing a Script #
 
 
 
