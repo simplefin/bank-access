@@ -1,0 +1,180 @@
+#!/usr/bin/env python
+# Copyright (c) The SimpleFIN Team
+# See LICENSE for details.
+from banka.args import listAccountsParser
+from banka.prompt import prompt
+from banka.ofxclient.template import OFX103RequestMaker
+from ofxparse.ofxparse import OfxParser
+from StringIO import StringIO
+import yaml
+import json
+import requests
+import sys
+import os
+
+
+def log(msg):
+    sys.stderr.write('%s\n' % (msg,))
+    sys.stderr.flush()
+
+
+def connectionDetails():
+    """
+    Acquire the connection details by prompting and reading the _identity
+    file.
+
+    @return: A dictionary suitable for logging in.
+    """
+    log("Gathering connection details")
+    identity = os.path.abspath(os.path.join(__file__, '../_identity'))
+    fh = open(identity, 'rb')
+    info = yaml.load(fh)
+
+    url = info['ofx_root_url']
+    fi_id = info['ofx_fi_id']
+    fi_org = info['ofx_fi_org']
+
+    user_login = prompt('_login')
+    user_password = prompt('password')
+
+    return {
+        'url': url,
+        'fi_org': fi_org,
+        'fi_id': fi_id,
+        'user_login': user_login,
+        'user_password': user_password,
+        'domain': info.get('domain'),
+    }
+
+
+def listAccounts(cargs):
+    """
+    Get a list of the bank accounts available to this login.
+    """
+    log("Listing accounts")
+    maker = OFX103RequestMaker()
+    payload = maker.accountInfo(cargs['fi_org'], cargs['fi_id'],
+                                cargs['user_login'], cargs['user_password'])
+    headers = maker.httpHeaders()
+
+    response = requests.post(cargs['url'], data=payload, headers=headers)
+
+    fh = StringIO(response.text)
+    ofx = OfxParser.parse(fh)
+    return ofx.accounts
+
+
+def requestStatements(cargs, accounts, start_date, end_date):
+    """
+    Get the statements for several accounts.
+
+    @param accounts: A list of C{ofxparse.Account}s.
+    @param start_date: start C{date}
+    @param end_date: end C{date}
+    """
+    log("Requesting statements")
+    dict_accounts = []
+    for account in accounts:
+        if account.type == 1:
+            # normal bank account
+            dict_accounts.append({
+                'routing_number': account.routing_number,
+                'account_number': account.account_id,
+                'account_type_string': account.account_type,
+            })
+        elif account.type == 2:
+            # credit card
+            dict_accounts.append({
+                'account_number': account.account_id,
+                'account_type': 'creditcard',
+            })
+
+    maker = OFX103RequestMaker()
+    payload = maker.accountStatements(cargs['fi_org'], cargs['fi_id'],
+                                      cargs['user_login'],
+                                      cargs['user_password'],
+                                      dict_accounts,
+                                      start_date, end_date)
+    headers = maker.httpHeaders()
+
+    response = requests.post(cargs['url'], data=payload, headers=headers)
+
+    assert response.status_code == 200, '%r %r: %r' % (response,
+                                response.status_code, response.text)
+
+    fh = StringIO(response.text)
+    ofx = OfxParser.parse(fh)
+    return ofx
+
+
+def statementsToDict(cargs, statements):
+    """
+    Convert the result of an OfxParser to a dictionary.
+    """
+    log("Converting statements")
+    data = {}
+    accounts = []
+    for account in statements.accounts:
+        stmt = account.statement
+        balance_transaction = None
+        last_transaction_date = None
+        transactions = []
+        if stmt.transactions:
+            t = stmt.transactions[-1]
+            balance_transaction = t.id
+            last_transaction_date = t.date
+        for t in stmt.transactions:
+            transactions.append({
+                'id': t.id,
+                'posted': t.date,
+                'amount': str(t.amount),
+                'description': t.memo,
+            })
+        d = {
+            'org': {
+                'domain': cargs['domain'],
+                'sfin-url': None,
+            },
+            '_insecure_id': account.account_id,
+            "name": account.account_type,
+            "currency": stmt.currency,
+            "balance": str(stmt.balance),
+            "available-balance": str(stmt.available_balance),
+            "balance-as-of": balance_transaction,
+            "last-transaction-posted": last_transaction_date,
+            "transactions": transactions,
+        }
+        accounts.append(d)
+    return {
+        'accounts': accounts,
+    }
+
+
+def _dateJson(obj):
+    try:
+        return obj.isoformat()
+    except:
+        pass
+    raise TypeError("Can not serialize %r" % (obj,))
+
+
+def toJson(obj):
+    return json.dumps(obj, default=_dateJson)
+
+
+def main(args):
+    parser = listAccountsParser()
+    args = parser.parse_args(args)
+    start_date = args.start_date
+    end_date = args.end_date
+
+    conn_args = connectionDetails()
+    accounts = listAccounts(conn_args)
+    statements = requestStatements(conn_args, accounts, start_date, end_date)
+    d = statementsToDict(conn_args, statements)
+    log(d)
+    print toJson(d)
+
+
+if __name__ == '__main__':
+    main(sys.argv[1:])
