@@ -57,8 +57,8 @@ v103_statementRequest = '''<STMTTRNRQ>
             </BANKACCTFROM>
             <INCTRAN>
                 <DTSTART>{{ start_date }}
-                <DTEND>{{ end_date }}
-                <INCLUDE>Y
+                {% if end_date %}<DTEND>{{ end_date }}
+                {% endif %}<INCLUDE>Y
             </INCTRAN>
         </STMTRQ>
     </STMTTRNRQ>'''
@@ -71,8 +71,8 @@ v103_creditcardStatementRequest = '''<CCSTMTTRNRQ>
             </CCACCTFROM>
             <INCTRAN>
                 <DTSTART>{{ start_date }}
-                <DTEND>{{ end_date }}
-                <INCLUDE>Y
+                {% if end_date %}<DTEND>{{ end_date }}
+                {% endif %}<INCLUDE>Y
             </INCTRAN>
         </CCSTMTRQ>
     </CCSTMTTRNRQ>'''

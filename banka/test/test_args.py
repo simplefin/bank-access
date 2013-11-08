@@ -2,7 +2,7 @@
 # See LICENSE for details.
 
 from unittest import TestCase
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 import argparse
 
 from banka.args import strToDatetime, listAccountsParser
@@ -55,3 +55,16 @@ class listAccountsParserTest(TestCase):
         parser = listAccountsParser()
         args = parser.parse_args(['--end-date', '2001-02-02'])
         self.assertEqual(args.end_date, date(2001, 2, 2))
+
+    def test_default(self):
+        """
+        If nothing is given, get transactions from the past 8 days
+        """
+        parser = listAccountsParser()
+        args = parser.parse_args([])
+        self.assertEqual(args.end_date, None)
+        today = datetime.now().date()
+        expected = today - timedelta(days=8)
+        self.assertEqual(args.start_date, expected, "Should get the "
+                         "last 8 days of transactions by default.  Should be"
+                         " %r, not %r" % (expected, args.start_date))

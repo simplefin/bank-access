@@ -72,7 +72,7 @@ class OFX103RequestMaker(object):
         return template.render(params).encode('utf-8')
 
     def accountStatements(self, fi_org, fi_id, user_login, user_password,
-                          accounts, start_date, end_date):
+                          accounts, start_date, end_date=None):
         """
         Generate a request body for requesting account transactions.
         """
@@ -84,6 +84,8 @@ class OFX103RequestMaker(object):
                 bank_accounts.append(account)
             else:
                 creditcards.append(account)
+        if end_date:
+            end_date = end_date.strftime('%Y%m%d')
         params = {
             'now': self.now(),
             'app_id': self.app_id,
@@ -95,7 +97,7 @@ class OFX103RequestMaker(object):
             'bank_accounts': bank_accounts,
             'creditcards': creditcards,
             'start_date': start_date.strftime('%Y%m%d'),
-            'end_date': end_date.strftime('%Y%m%d'),
+            'end_date': end_date,
         }
         template = self.jinja_env.get_template('accountStatements')
         return template.render(params).encode('utf-8')

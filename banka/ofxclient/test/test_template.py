@@ -205,10 +205,7 @@ NEWFILEUID:NONE
         If there are no credit cards, there should be no <CREDITCARDMSGSRQV1>
         section.
         """
-        trans = ['2222', '2223', '2224']
-        maker = OFX103RequestMaker(
-            transaction_id_generator=lambda: trans.pop(0),
-            _now=lambda: 'CURRENT_TIME')
+        maker = OFX103RequestMaker()
         body = maker.accountStatements('Org', '4444', '1111', 'password', [
             {
                 'account_number': 'ac3333',
@@ -228,10 +225,7 @@ NEWFILEUID:NONE
         If there are no bank accounts (only credit cards) there should be no
         <BANKMSGSRQV1> section.
         """
-        trans = ['2222', '2223', '2224']
-        maker = OFX103RequestMaker(
-            transaction_id_generator=lambda: trans.pop(0),
-            _now=lambda: 'CURRENT_TIME')
+        maker = OFX103RequestMaker()
         body = maker.accountStatements('Org', '4444', '1111', 'password', [
             {
                 'account_number': 'cc7777',
@@ -239,3 +233,21 @@ NEWFILEUID:NONE
             },
         ], date(2001, 1, 1), date(2004, 2, 3))
         self.assertNotIn('<BANKMSGSRQV1>', body)
+
+    def test_accountStatements_noEndDate(self):
+        """
+        If no end_date is given, leave off that element.
+        """
+        maker = OFX103RequestMaker()
+        body = maker.accountStatements('Org', '4444', '1111', 'password', [
+            {
+                'account_number': 'ac3333',
+                'account_type_string': 'SAVINGS',
+                'routing_number': '99999',
+            },
+            {
+                'account_number': 'cc7777',
+                'account_type': 'creditcard',
+            },
+        ], date(2001, 1, 1))
+        self.assertNotIn('<DTEND>', body)

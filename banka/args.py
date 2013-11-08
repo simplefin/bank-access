@@ -2,7 +2,7 @@
 # See LICENSE for details.
 
 import argparse
-from datetime import datetime
+from datetime import datetime, timedelta
 
 
 def strToDatetime(s):
@@ -35,7 +35,11 @@ def listAccountsParser():
     """
     Get an argument parser suitable for a list-accounts script.
     """
+    today = datetime.now().date()
+    default_start_date = today - timedelta(days=8)
+
     parser = argparse.ArgumentParser()
-    parser.add_argument('--start-date', dest='start_date', type=strToDate)
+    parser.add_argument('--start-date', dest='start_date', type=strToDate,
+                        default=default_start_date)
     parser.add_argument('--end-date', dest='end_date', type=strToDate)
     return parser
