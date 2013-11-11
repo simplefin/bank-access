@@ -79,7 +79,7 @@ class OFXClientTest(TestCase):
         The default OFX Requests Maker is the L{OFX103RequestMaker}.
         """
         x = OFXClient()
-        self.assertTrue(isinstance(x.requestMaker, OFX103RequestMaker))
+        self.assertTrue(isinstance(x.requestPayloadMaker, OFX103RequestMaker))
 
     def test_parseAccountList(self):
         """

@@ -23,7 +23,7 @@ class OFXClient(object):
         @param _prompt: A function to use for sensitive data prompting.
         """
         self.prompt = _prompt or prompt
-        self.requestMaker = OFX103RequestMaker()
+        self.requestPayloadMaker = OFX103RequestMaker()
 
     def readServerDetails(self, filename):
         """
