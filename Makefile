@@ -12,6 +12,7 @@ test:
 	pyflakes banka bin/banka
 	$(MAKE) pep8
 	$(MAKE) test-copyright
+	$(MAKE) test-info-yml
 
 pep8:
 	pep8 --show-source --show-pep8 banka
@@ -24,3 +25,6 @@ clean:
 
 test-copyright:
 	@bash util/assertcopyright.sh
+
+test-info-yml:
+	@bash util/assertminimuminfo.sh
