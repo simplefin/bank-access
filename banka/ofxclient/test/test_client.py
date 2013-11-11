@@ -5,6 +5,8 @@ from twisted.python.filepath import FilePath
 
 from mock import create_autospec
 
+from ofxparse.ofxparse import Ofx, Account, AccountType
+
 from banka.prompt import prompt
 from banka.ofxclient.client import OFXClient
 from banka.ofxclient.template import OFX103RequestMaker
@@ -79,12 +81,40 @@ class OFXClientTest(TestCase):
         x = OFXClient()
         self.assertTrue(isinstance(x.requestMaker, OFX103RequestMaker))
 
-    def test_parseAccountListResponse(self):
+    def test_parseAccountList(self):
         """
-        An account list OFX response should be parsed into a list of
-        dictionaries suitable for the request maker to use.
+        C{parseAccountList} should turn an account list OFX object (from the
+        C{ofxparser} library) into a list of dictionaries suitable for use
+        in the requestMaker.
         """
-        sample_response_body = ('''''')
+        ofx = Ofx()
+
+        account1 = Account()
+        account1.routing_number = 'router1'
+        account1.account_id = '11112'
+        account1.account_type = 'CHECKING'
+        account1.type = AccountType.Bank
+
+        account2 = Account()
+        account2.account_id = '11113'
+        account2.type = AccountType.CreditCard
+
+        ofx.accounts = [account1, account2]
+
+        x = OFXClient()
+        accounts = x.parseAccountList(ofx)
+        self.assertEqual(accounts, [
+            {
+                'routing_number': 'router1',
+                'account_number': '11112',
+                'account_type_string': 'CHECKING',
+                'account_type': 'bank',
+            },
+            {
+                'account_number': '11113',
+                'account_type': 'creditcard',
+            },
+        ])
 
     def test_parseStatementResponse(self):
         """

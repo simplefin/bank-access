@@ -3,6 +3,8 @@
 import yaml
 import requests
 
+from ofxparse.ofxparse import AccountType
+
 from banka.prompt import prompt
 from banka.ofxclient.template import OFX103RequestMaker
 
@@ -54,3 +56,23 @@ class OFXClient(object):
         self._credentials['user_login'] = self.prompt('_login')
         self._credentials['user_password'] = self.prompt('password')
         return self._credentials
+
+    def parseAccountList(self, ofx):
+        """
+        Parse an Ofx object into a list of account dictionaries.
+        """
+        ret = []
+        for account in ofx.accounts:
+            if account.type == AccountType.Bank:
+                ret.append({
+                    'routing_number': account.routing_number,
+                    'account_number': account.account_id,
+                    'account_type': 'bank',
+                    'account_type_string': 'CHECKING',
+                })
+            else:
+                ret.append({
+                    'account_number': account.account_id,
+                    'account_type': 'creditcard',
+                })
+        return ret
