@@ -56,11 +56,28 @@ one!  Follow [CONTRIBUTING.md](CONTRIBUTING.md) and do these steps:
 
 1. Fork this repo.
 
-2. Make a directory for your institution, complete with an `info.yml` file
-   and `list-accounts` script. (See [Writing a Script](#writing-a-script)).
+2. Make a directory for your bank with an `info.yml` file.  Name the
+   directory the domain name of the bank, if possible.
 
-3. Submit a pull request.
+3. Write a `list-accounts` script. (See [Writing a Script](#writing-a-script)).
 
+4. Submit a pull request.
+
+
+# `info.yml` file #
+
+The `info.yml` file should have at least the following information:
+
+    ---
+    name: America First Credit Union
+    domain: americafirst.com
+    maintainers:
+      - joe (joe@example.com)
+
+`maintainers` is a list of people who are willing to maintain the scripts
+within the directory (i.e. test the scripts when the underlying library
+changes or fix them when the bank breaks them).  The file may also contain
+other information as needed.
 
 
 # Writing a Script #
