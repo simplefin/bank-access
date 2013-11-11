@@ -1,7 +1,10 @@
 # Copyright (c) The SimpleFIN Team
 # See LICENSE for details.
 import yaml
+import requests
+
 from banka.prompt import prompt
+from banka.ofxclient.template import OFX103RequestMaker
 
 
 class OFXClient(object):
@@ -9,7 +12,7 @@ class OFXClient(object):
     XXX
     """
 
-    prompt = prompt
+    _post = requests.post
 
     ofx_url = None
     ofx_fi_id = None
@@ -20,7 +23,11 @@ class OFXClient(object):
         """
         @param _prompt: A function to use for sensitive data prompting.
         """
-        self.prompt = _prompt or self.prompt
+        self.prompt = _prompt or prompt
+        self.requestMaker = OFX103RequestMaker()
+
+    def _post(self, *args, **kwargs):
+        return requests.post(*args, **kwargs)
 
     def readServerDetails(self, filename):
         """

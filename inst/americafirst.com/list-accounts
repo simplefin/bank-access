@@ -59,6 +59,7 @@ def listAccounts(cargs):
 
     response = requests.post(cargs['url'], data=payload, headers=headers)
 
+    log(response.text)
     fh = StringIO(response.text)
     ofx = OfxParser.parse(fh)
     return ofx.accounts
@@ -102,6 +103,7 @@ def requestStatements(cargs, accounts, start_date, end_date):
     assert response.status_code == 200, '%r %r: %r' % (response,
                                 response.status_code, response.text)
 
+    log(response.text)
     fh = StringIO(response.text)
     ofx = OfxParser.parse(fh)
     return ofx

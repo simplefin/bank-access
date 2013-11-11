@@ -7,6 +7,7 @@ from mock import create_autospec
 
 from banka.prompt import prompt
 from banka.ofxclient.client import OFXClient
+from banka.ofxclient.template import OFX103RequestMaker
 
 
 class OFXClientTest(TestCase):
@@ -70,3 +71,22 @@ class OFXClientTest(TestCase):
         creds = x.loginCredentials()
         self.assertEqual(fake_prompt.call_count, 0, "Should not prompt on "
                          "subsequent calls for the credentials")
+
+    def test_requestMaker(self):
+        """
+        The default OFX Requests Maker is the L{OFX103RequestMaker}.
+        """
+        x = OFXClient()
+        self.assertTrue(isinstance(x.requestMaker, OFX103RequestMaker))
+
+    def test_parseAccountListResponse(self):
+        """
+        An account list OFX response should be parsed into a list of
+        dictionaries suitable for the request maker to use.
+        """
+        sample_response_body = ('''''')
+
+    def test_parseStatementResponse(self):
+        """
+        """
+        sample_response_body = ('''''')
