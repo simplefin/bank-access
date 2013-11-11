@@ -20,13 +20,13 @@ def log(msg):
 
 def connectionDetails():
     """
-    Acquire the connection details by prompting and reading the _identity
+    Acquire the connection details by prompting and reading the info.yml
     file.
 
     @return: A dictionary suitable for logging in.
     """
     log("Gathering connection details")
-    identity = os.path.abspath(os.path.join(__file__, '../_identity'))
+    identity = os.path.abspath(os.path.join(__file__, '../info.yml'))
     fh = open(identity, 'rb')
     info = yaml.load(fh)
 
