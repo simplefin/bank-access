@@ -103,8 +103,35 @@ preference, try the following when writing a script:
 
 ## Output ##
 
-If successful, the script should write an insecure SimpleFIN document to
-stdout and exit with exit code `0`.
+If successful, the script should write a
+[SimpleFIN Account Set](http://simplefin.org/protocol.html#account-set) to
+stdout and exit with exit code `0`.  Here's an example:
+
+    {
+      "accounts": [
+        {
+          "org": {
+            "domain": "mybank.com"
+            "sfin-url": null
+          },
+          "_insecure_id": "9982739",
+          "name": "Savings",
+          "currency": "USD",
+          "balance": "100.23",
+          "available-balance": "75.23",
+          "balance-as-of": "AO334",
+          "last-transaction-posted": "2013-07-29T19:22:09.210",
+          "transactions": [
+            {
+              "id": "12394832938403",
+              "posted": "1995-02-17T23:56:12.22239",
+              "amount": "-33293.43",
+              "description": "Uncle Frank's Bait Shop",
+            }
+          ]
+        }
+      ]
+    }
 
 Use stderr for logging.
 
@@ -128,8 +155,6 @@ prompt for credentials using `banka.prompt.prompt` like this:
 
 **All scripts must** prompt for the specially named `_login` credential
 **first.**
-
-
-## 
+ 
 
 
