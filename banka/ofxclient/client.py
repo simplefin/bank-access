@@ -1,7 +1,6 @@
 # Copyright (c) The SimpleFIN Team
 # See LICENSE for details.
 import yaml
-import requests
 
 from ofxparse.ofxparse import AccountType
 
@@ -14,8 +13,6 @@ class OFXClient(object):
     XXX
     """
 
-    _post = requests.post
-
     ofx_url = None
     ofx_fi_id = None
     ofx_fi_org = None
@@ -27,9 +24,6 @@ class OFXClient(object):
         """
         self.prompt = _prompt or prompt
         self.requestMaker = OFX103RequestMaker()
-
-    def _post(self, *args, **kwargs):
-        return requests.post(*args, **kwargs)
 
     def readServerDetails(self, filename):
         """

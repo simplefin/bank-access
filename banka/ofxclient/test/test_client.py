@@ -115,8 +115,3 @@ class OFXClientTest(TestCase):
                 'account_type': 'creditcard',
             },
         ])
-
-    def test_parseStatementResponse(self):
-        """
-        """
-        sample_response_body = ('''''')
