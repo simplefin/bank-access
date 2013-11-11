@@ -44,13 +44,9 @@ Install `banka`:
 
 then run the script like this:
 
-    banka run inst/bankA.com/list-accounts
+    banka run inst/<NAME OF YOUR BANK>/list-accounts
 
-`banka run inst/bankA.com/list-accounts` is nearly equivalent to just doing
-`inst/bankA.com/list-accounts` with the added benefit that sensitive data typed
-in to the terminal is not shown.  If you aren't using a terminal to run this
-script (e.g. you are spawning this from within another process), you can just
-call `inst/bankA.com/list-accounts`
+which will prompt you for your credentials.
 
 
 ## If you don't see your bank listed ##
@@ -60,17 +56,17 @@ one!  Follow [CONTRIBUTING.md](CONTRIBUTING.md) and do these steps:
 
 1. Fork this repo.
 
-2. Make a directory for your institution, complete with an `_identity` file
+2. Make a directory for your institution, complete with an `info.yml` file
    and `list-accounts` script. (See [Writing a Script](#writing-a-script)).
 
 3. Submit a pull request.
 
 
-# Methods of Bridging #
 
-The method used to bridge between a bank and SimpleFIN depends on what the bank
-makes available.  In order of preference, try the following when
-writing a script for this repository:
+# Writing a Script #
+
+How you write the script depends on what the bank provides.  In order of
+preference, try the following when writing a script:
 
 1. OFX Server
 
@@ -105,13 +101,15 @@ writing a script for this repository:
    contact the running script for the required information.
 
 
-# Writing a Script #
+## Output ##
 
-First, determine the best [method of bridging](#methods-of-bridging) for your
-bank.
+If successful, the script should write an insecure SimpleFIN document to
+stdout and exit with exit code `0`.
+
+Use stderr for logging.
 
 
-## Running your script during debugging ##
+## Running your script during development ##
 
 Run your script with the credential wrapper:
 
@@ -131,5 +129,7 @@ prompt for credentials using `banka.prompt.prompt` like this:
 **All scripts must** prompt for the specially named `_login` credential
 **first.**
 
+
+## 
 
 

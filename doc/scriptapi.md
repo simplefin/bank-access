@@ -8,7 +8,7 @@ The structure of this repository is as follows:
     banka/
     inst/
         bankA.com/
-            _identity
+            info.yml
             list-accounts
         bankB.com/
             ...
@@ -21,13 +21,12 @@ The structure of this repository is as follows:
   credit union, etc...).  Please use the domain name of the institution for
   the directory name where possible.
 
-- `inst/*/_identity` is an Identity File for the bank directory it lives in
-  (see below).
+- `inst/*/info.yml` contains information related to a bank.
 
 - `inst/*/list-account` is a List Accounts Bank Access script (see below).
 
 
-## Identity File ##
+## `info.yml` ##
 
 The Identity File is a simple YAML document that describes the institution.  A
 sample Indentity File looks like this:
