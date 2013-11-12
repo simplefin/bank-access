@@ -7,7 +7,7 @@ from datetime import datetime, date
 
 from ofxparse.ofxparse import OfxParser
 
-from banka.ofxclient.template import OFX103RequestMaker
+from banka.ofx.template import OFX103RequestMaker
 
 
 def diffText(a, b, nameA=None, nameB=None):

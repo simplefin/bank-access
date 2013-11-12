@@ -6,7 +6,7 @@ from uuid import uuid4
 
 from jinja2 import Environment, StrictUndefined
 
-from banka.ofxclient.template_data import v103
+from banka.ofx.template_data import v103
 
 
 class OFX103RequestMaker(object):

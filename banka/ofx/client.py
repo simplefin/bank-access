@@ -5,7 +5,7 @@ import yaml
 from ofxparse.ofxparse import AccountType
 
 from banka.prompt import prompt
-from banka.ofxclient.template import OFX103RequestMaker
+from banka.ofx.template import OFX103RequestMaker
 
 
 class OFXClient(object):

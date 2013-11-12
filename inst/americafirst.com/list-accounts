@@ -3,7 +3,7 @@
 # See LICENSE for details.
 from banka.args import listAccountsParser
 from banka.prompt import prompt
-from banka.ofxclient.template import OFX103RequestMaker
+from banka.ofx.template import OFX103RequestMaker
 from ofxparse.ofxparse import OfxParser
 from StringIO import StringIO
 import yaml

@@ -8,8 +8,8 @@ from mock import create_autospec
 from ofxparse.ofxparse import Ofx, Account, AccountType
 
 from banka.prompt import prompt
-from banka.ofxclient.client import OFXClient
-from banka.ofxclient.template import OFX103RequestMaker
+from banka.ofx.client import OFXClient
+from banka.ofx.template import OFX103RequestMaker
 
 
 class OFXClientTest(TestCase):
