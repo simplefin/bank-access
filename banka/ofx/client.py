@@ -1,8 +1,10 @@
 # Copyright (c) The SimpleFIN Team
 # See LICENSE for details.
 import yaml
+import requests
+from StringIO import StringIO
 
-from ofxparse.ofxparse import AccountType
+from ofxparse.ofxparse import AccountType, OfxParser
 
 from banka.prompt import prompt
 from banka.ofx.template import OFX103RequestMaker
@@ -13,6 +15,7 @@ class OFXClient(object):
     XXX
     """
 
+    _ofxParser = OfxParser
     domain = None
     ofx_url = None
     ofx_fi_id = None
@@ -24,6 +27,7 @@ class OFXClient(object):
         @param _prompt: A function to use for sensitive data prompting.
         """
         self.prompt = _prompt or prompt
+        self.requests = requests
         self.requestMaker = OFX103RequestMaker()
 
     def readServerDetails(self, filename):
@@ -73,3 +77,25 @@ class OFXClient(object):
                     'account_type': 'creditcard',
                 })
         return ret
+
+    def _parseOfx(self, text):
+        """
+        Convert an OFX string to an OFX object.
+        """
+        return self._ofxParser(StringIO(text))
+
+    def requestAccountList(self):
+        """
+        Connect to the OFX server and get a list of accounts.  Will prompt
+        for account credentials if necessary.
+        """
+        credentials = self.loginCredentials()
+        payload = self.requestMaker.accountInfo(self.ofx_fi_org,
+                                                self.ofx_fi_id,
+                                                credentials['user_login'],
+                                                credentials['user_password'])
+        headers = self.requestMaker.httpHeaders()
+        response = self.requests.post(self.ofx_url,
+                                      data=payload, headers=headers)
+        ofx = self._parseOfx(response.text)
+        return self.parseAccountList(ofx)

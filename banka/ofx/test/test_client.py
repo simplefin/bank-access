@@ -3,9 +3,13 @@
 from twisted.trial.unittest import TestCase
 from twisted.python.filepath import FilePath
 
-from mock import create_autospec
+from mock import create_autospec, MagicMock
 
-from ofxparse.ofxparse import Ofx, Account, AccountType
+from StringIO import StringIO
+
+import requests
+
+from ofxparse.ofxparse import Ofx, Account, AccountType, OfxParser
 
 from banka.prompt import prompt
 from banka.ofx.client import OFXClient
@@ -28,6 +32,13 @@ class OFXClientTest(TestCase):
         """
         x = OFXClient(_prompt='foo')
         self.assertEqual(x.prompt, 'foo')
+
+    def test_defaultRequester(self):
+        """
+        By default, the L{requests} library is used for making requests.
+        """
+        x = OFXClient()
+        self.assertEqual(x.requests, requests)
 
     def test_readServerDetails(self):
         """
@@ -117,3 +128,61 @@ class OFXClientTest(TestCase):
                 'account_type': 'creditcard',
             },
         ])
+
+    def test__parseOfx(self):
+        """
+        _parseOfx should pass a StringIO to _ofxParser and return the result.
+        """
+        x = OFXClient()
+        self.assertEqual(x._ofxParser, OfxParser)
+
+        x._ofxParser = MagicMock(return_value='foo')
+        result = x._parseOfx('hey')
+        self.assertEqual(x._ofxParser.call_count, 1)
+        arg = x._ofxParser.call_args[0][0]
+        self.assertTrue(isinstance(arg, StringIO))
+        self.assertEqual(arg.getvalue(), 'hey')
+        self.assertEqual(result, 'foo')
+
+    def test_requestAccountList(self):
+        """
+        Requesting an account list should get the credentials, use the
+        C{requestMaker} to generate payload and headers, post to an OFX server
+        then parse the result, returning a dictionary of accounts.
+        """
+        x = OFXClient()
+
+        # faking, faking, faking
+        response = MagicMock()
+        response.text = 'The response text'
+
+        x.requests.post = create_autospec(x.requests.post,
+                                          return_value=response)
+        x.loginCredentials = create_autospec(x.loginCredentials, return_value={
+            'user_login': '12345678',
+            'user_password': 'password',
+        })
+        x.requestMaker.accountInfo = create_autospec(
+            x.requestMaker.accountInfo,
+            return_value='payload')
+        x.parseAccountList = create_autospec(x.parseAccountList,
+                                             return_value='account list')
+        x._parseOfx = create_autospec(x._parseOfx, return_value='return ofx')
+
+        x.ofx_url = 'https://ofx.example.com'
+        x.ofx_fi_id = '1234'
+        x.ofx_fi_org = 'Some Bank'
+
+        account_list = x.requestAccountList()
+        x.loginCredentials.assert_called_once_with()
+        x.requestMaker.accountInfo.assert_called_once_with('Some Bank',
+                                                           '1234',
+                                                           '12345678',
+                                                           'password')
+        headers = x.requestMaker.httpHeaders()
+        x.requests.post.assert_called_once_with('https://ofx.example.com',
+                                                data='payload',
+                                                headers=headers)
+        x._parseOfx.assert_called_once_with('The response text')
+        x.parseAccountList.assert_called_once_with('return ofx')
+        self.assertEqual(account_list, 'account list')
