@@ -14,6 +14,7 @@ from ofxparse.ofxparse import Ofx, Account, AccountType, OfxParser
 from banka.prompt import prompt
 from banka.ofx.client import OFXClient
 from banka.ofx.template import OFX103RequestMaker
+from banka.ofx.parse import ofxToDict
 
 
 class OFXClientTest(TestCase):
@@ -145,6 +146,13 @@ class OFXClientTest(TestCase):
         self.assertEqual(arg.getvalue(), 'hey')
         self.assertEqual(result, 'foo')
 
+    def test__ofxToDict(self):
+        """
+        _ofxToDict should be L{banka.ofx.parse.ofxToDict} by default.
+        """
+        x = OFXClient()
+        self.assertEqual(x._ofxToDict, ofxToDict)
+
     def test_requestAccountList(self):
         """
         Requesting an account list should get the credentials, use the
@@ -157,6 +165,8 @@ class OFXClientTest(TestCase):
         response = MagicMock()
         response.text = 'The response text'
 
+        original = x.requests.post
+        self.addCleanup(setattr, x.requests, 'post', original)
         x.requests.post = create_autospec(x.requests.post,
                                           return_value=response)
         x.loginCredentials = create_autospec(x.loginCredentials, return_value={
@@ -187,3 +197,54 @@ class OFXClientTest(TestCase):
         x._parseOfx.assert_called_once_with('The response text')
         x.parseAccountList.assert_called_once_with('return ofx')
         self.assertEqual(account_list, 'account list')
+
+    def test_requestStatements(self):
+        """
+        Requesting statements should get the credentials, use the
+        C{requestMaker} to generate a payload and headers, post to an OFX
+        server, then parse the result, transforming it into a dictionary.
+        """
+        x = OFXClient()
+
+        # faking, faking, faking
+        response = MagicMock()
+        response.text = 'The response text'
+
+        original = x.requests.post
+        self.addCleanup(setattr, x.requests, 'post', original)
+        x.requests.post = create_autospec(x.requests.post,
+                                          return_value=response)
+        x.loginCredentials = create_autospec(x.loginCredentials, return_value={
+            'user_login': '12345678',
+            'user_password': 'password',
+        })
+        x.requestMaker.accountStatements = create_autospec(
+            x.requestMaker.accountStatements,
+            return_value='payload')
+        x.parseAccountList = create_autospec(x.parseAccountList,
+                                             return_value='account list')
+        x._parseOfx = create_autospec(x._parseOfx, return_value='return ofx')
+        x._ofxToDict = create_autospec(x._ofxToDict, return_value='the dict')
+
+        x.domain = 'foo.com'
+        x.ofx_url = 'https://ofx.example.com'
+        x.ofx_fi_id = '1234'
+        x.ofx_fi_org = 'Some Bank'
+
+        d = x.requestStatements('accounts', 'start', 'end')
+        x.loginCredentials.assert_called_once_with()
+        x.requestMaker.accountStatements.assert_called_once_with(
+            'Some Bank',
+            '1234',
+            '12345678',
+            'password',
+            'accounts',
+            'start',
+            'end')
+        headers = x.requestMaker.httpHeaders()
+        x.requests.post.assert_called_once_with('https://ofx.example.com',
+                                                data='payload',
+                                                headers=headers)
+        x._parseOfx.assert_called_once_with('The response text')
+        x._ofxToDict.assert_called_once_with('return ofx', 'foo.com')
+        self.assertEqual(d, 'the dict')

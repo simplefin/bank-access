@@ -8,6 +8,7 @@ from ofxparse.ofxparse import AccountType, OfxParser
 
 from banka.prompt import prompt
 from banka.ofx.template import OFX103RequestMaker
+from banka.ofx.parse import ofxToDict
 
 
 class OFXClient(object):
@@ -26,6 +27,7 @@ class OFXClient(object):
         """
         @param _prompt: A function to use for sensitive data prompting.
         """
+        self._ofxToDict = ofxToDict
         self.prompt = _prompt or prompt
         self.requests = requests
         self.requestMaker = OFX103RequestMaker()
@@ -99,3 +101,24 @@ class OFXClient(object):
                                       data=payload, headers=headers)
         ofx = self._parseOfx(response.text)
         return self.parseAccountList(ofx)
+
+    def requestStatements(self, accounts, start_date, end_date):
+        """
+        Connect to the OFX server and get a transaction statement for a bunch
+        of accounts.
+        """
+        credentials = self.loginCredentials()
+        payload = self.requestMaker.accountStatements(
+            self.ofx_fi_org,
+            self.ofx_fi_id,
+            credentials['user_login'],
+            credentials['user_password'],
+            accounts,
+            start_date,
+            end_date)
+        headers = self.requestMaker.httpHeaders()
+        response = self.requests.post(self.ofx_url,
+                                      data=payload, headers=headers)
+
+        ofx = self._parseOfx(response.text)
+        return self._ofxToDict(ofx, self.domain)
