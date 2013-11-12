@@ -136,10 +136,11 @@ class OFXClientTest(TestCase):
         x = OFXClient()
         self.assertEqual(x._ofxParser, OfxParser)
 
-        x._ofxParser = MagicMock(return_value='foo')
+        x._ofxParser = MagicMock()
+        x._ofxParser.parse.return_value = 'foo'
         result = x._parseOfx('hey')
-        self.assertEqual(x._ofxParser.call_count, 1)
-        arg = x._ofxParser.call_args[0][0]
+        self.assertEqual(x._ofxParser.parse.call_count, 1)
+        arg = x._ofxParser.parse.call_args[0][0]
         self.assertTrue(isinstance(arg, StringIO))
         self.assertEqual(arg.getvalue(), 'hey')
         self.assertEqual(result, 'foo')

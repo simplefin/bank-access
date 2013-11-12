@@ -29,24 +29,11 @@ def main(args):
     info_yml = os.path.abspath(os.path.join(__file__, '../info.yml'))
     client.readServerDetails(info_yml)
 
-    log("Prompting for credentials")
-    credentials = client.loginCredentials()
-
     log("Requesting accounts")
-    payload = client.requestMaker.accountInfo(
-                client.ofx_fi_org,
-                client.ofx_fi_id,
-                credentials['user_login'],
-                credentials['user_password'])
-    headers = client.requestMaker.httpHeaders()
-    response = requests.post(client.ofx_url, data=payload, headers=headers)
-
-    log(response.text)
-    fh = StringIO(response.text)
-    ofx = OfxParser.parse(fh)
-    accounts = client.parseAccountList(ofx)
+    accounts = client.requestAccountList()
 
     log("Requesting statements")
+    credentials = client.loginCredentials()
     payload = client.requestMaker.accountStatements(
                 client.ofx_fi_org,
                 client.ofx_fi_id,

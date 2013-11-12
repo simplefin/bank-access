@@ -82,7 +82,7 @@ class OFXClient(object):
         """
         Convert an OFX string to an OFX object.
         """
-        return self._ofxParser(StringIO(text))
+        return self._ofxParser.parse(StringIO(text))
 
     def requestAccountList(self):
         """
