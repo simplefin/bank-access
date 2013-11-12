@@ -2,13 +2,11 @@
 # Copyright (c) The SimpleFIN Team
 # See LICENSE for details.
 from banka.args import listAccountsParser
-from banka.prompt import prompt
 from banka.ofx.client import OFXClient
 from banka.ofx.parse import toJson, ofxToDict
 
 from ofxparse.ofxparse import OfxParser
 from StringIO import StringIO
-import yaml
 import requests
 import sys
 import os
@@ -34,7 +32,7 @@ def main(args):
     log("Prompting for credentials")
     credentials = client.loginCredentials()
 
-    log("Requestsing accounts")
+    log("Requesting accounts")
     payload = client.requestMaker.accountInfo(
                 client.ofx_fi_org,
                 client.ofx_fi_id,
