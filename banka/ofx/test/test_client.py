@@ -35,6 +35,7 @@ class OFXClientTest(TestCase):
         """
         info = FilePath(self.mktemp())
         info.setContent('---\n'
+                        'domain: foo.com\n'
                         'ofx:\n'
                         '  url: https://example.com\n'
                         '  fi_id: 1234\n'
@@ -42,6 +43,7 @@ class OFXClientTest(TestCase):
 
         x = OFXClient()
         x.readServerDetails(info.path)
+        self.assertEqual(x.domain, 'foo.com')
         self.assertEqual(x.ofx_url, 'https://example.com')
         self.assertEqual(x.ofx_fi_id, '1234')
         self.assertEqual(x.ofx_fi_org, 'Some Org')
@@ -107,7 +109,7 @@ class OFXClientTest(TestCase):
             {
                 'routing_number': 'router1',
                 'account_number': '11112',
-                'account_type_string': 'CHECKING',
+                'bank_account_type': 'CHECKING',
                 'account_type': 'bank',
             },
             {

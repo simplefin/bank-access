@@ -80,7 +80,7 @@ class OFX103RequestMaker(object):
         creditcards = []
         for account in accounts:
             account['ofx_trans_id'] = self.makeTransId()
-            if account.get('account_type', 'bank_account') == 'bank_account':
+            if account['account_type'] == 'bank':
                 bank_accounts.append(account)
             else:
                 creditcards.append(account)

@@ -110,13 +110,15 @@ NEWFILEUID:NONE
         body = maker.accountStatements('Org', '4444', '1111', 'password', [
             {
                 'account_number': 'ac3333',
-                'account_type_string': 'SAVINGS',
+                'bank_account_type': 'SAVINGS',
                 'routing_number': '99999',
+                'account_type': 'bank',
             },
             {
                 'account_number': 'ac5555',
-                'account_type_string': 'CHECKING',
+                'bank_account_type': 'CHECKING',
                 'routing_number': '88888',
+                'account_type': 'bank',
             },
             {
                 'account_number': 'cc7777',
@@ -209,13 +211,15 @@ NEWFILEUID:NONE
         body = maker.accountStatements('Org', '4444', '1111', 'password', [
             {
                 'account_number': 'ac3333',
-                'account_type_string': 'SAVINGS',
+                'bank_account_type': 'SAVINGS',
                 'routing_number': '99999',
+                'account_type': 'bank',
             },
             {
                 'account_number': 'ac5555',
-                'account_type_string': 'CHECKING',
+                'bank_account_type': 'CHECKING',
                 'routing_number': '88888',
+                'account_type': 'bank',
             },
         ], date(2001, 1, 1), date(2004, 2, 3))
         self.assertNotIn('<CREDITCARDMSGSRQV1>', body)
@@ -242,8 +246,9 @@ NEWFILEUID:NONE
         body = maker.accountStatements('Org', '4444', '1111', 'password', [
             {
                 'account_number': 'ac3333',
-                'account_type_string': 'SAVINGS',
+                'bank_account_type': 'SAVINGS',
                 'routing_number': '99999',
+                'account_type': 'bank',
             },
             {
                 'account_number': 'cc7777',

@@ -13,6 +13,7 @@ class OFXClient(object):
     XXX
     """
 
+    domain = None
     ofx_url = None
     ofx_fi_id = None
     ofx_fi_org = None
@@ -34,6 +35,8 @@ class OFXClient(object):
         fh = open(filename, 'rb')
         info = yaml.load(fh)
         fh.close()
+
+        self.domain = info['domain']
 
         ofx_info = info['ofx']
         self.ofx_url = ofx_info['url']
@@ -62,7 +65,7 @@ class OFXClient(object):
                     'routing_number': account.routing_number,
                     'account_number': account.account_id,
                     'account_type': 'bank',
-                    'account_type_string': 'CHECKING',
+                    'bank_account_type': account.account_type,
                 })
             else:
                 ret.append({
