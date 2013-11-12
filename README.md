@@ -88,7 +88,8 @@ preference, try the following when writing a script:
 1. OFX Server
 
    Check www.ofxhome.com to see if your bank provides an OFX server.  If so,
-   writing a script may be pretty easy.
+   writing a script is straightforward.  Use
+   [`inst/americafirst.com`](inst/americafirst.com/) as a model.
 
 2. OFX file download
 

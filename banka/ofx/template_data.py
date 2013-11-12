@@ -53,7 +53,7 @@ v103_statementRequest = '''<STMTTRNRQ>
             <BANKACCTFROM>
                 <BANKID>{{ account.routing_number }}
                 <ACCTID>{{ account.account_number }}
-                <ACCTTYPE>{{ account.account_type_string }}
+                <ACCTTYPE>{{ account.bank_account_type }}
             </BANKACCTFROM>
             <INCTRAN>
                 <DTSTART>{{ start_date }}

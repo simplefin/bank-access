@@ -3,6 +3,7 @@ name: America First Credit Union
 domain: americafirst.com
 maintainers:
   - github.com/iffy
-ofx_root_url: https://ofx.americafirst.com
-ofx_fi_id: 54324
-ofx_fi_org: America First Credit Union
+ofx:
+  url: https://ofx.americafirst.com
+  fi_id: 54324
+  fi_org: America First Credit Union

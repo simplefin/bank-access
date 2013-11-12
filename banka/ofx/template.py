@@ -6,7 +6,7 @@ from uuid import uuid4
 
 from jinja2 import Environment, StrictUndefined
 
-from banka.ofxclient.template_data import v103
+from banka.ofx.template_data import v103
 
 
 class OFX103RequestMaker(object):
@@ -80,7 +80,7 @@ class OFX103RequestMaker(object):
         creditcards = []
         for account in accounts:
             account['ofx_trans_id'] = self.makeTransId()
-            if account.get('account_type', 'bank_account') == 'bank_account':
+            if account['account_type'] == 'bank':
                 bank_accounts.append(account)
             else:
                 creditcards.append(account)
