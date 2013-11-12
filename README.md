@@ -4,7 +4,7 @@ See LICENSE for details.
 -->
 [![Build Status](https://travis-ci.org/simplefin/bank-access.png)](https://travis-ci.org/simplefin/bank-access)
 
-This repository contains a collection of scripts that you can use to
+This repository contains a collection of scripts can be used to
 programmatically get bank transaction information.  The scripts herein only
 read data and do not change the financial state of a bank (such as doing a
 transfer).
@@ -25,7 +25,7 @@ from banks which don't implement SimpleFIN to tools which expect SimpleFIN.
 
 Tell your bank you want SimpleFIN!
 
-And please contribute a script for your banks!
+And please contribute a script for your bank!
 
 
 
@@ -51,8 +51,8 @@ which will prompt you for your credentials.
 
 ## If you don't see your bank listed ##
 
-If you don't see your bank listed in the [`inst` directory](inst/), please contribute
-one!  Follow [CONTRIBUTING.md](CONTRIBUTING.md) and do these steps:
+If you don't see your bank listed in the [`inst` directory](inst/), please 
+contribute!  Follow [CONTRIBUTING.md](CONTRIBUTING.md) and these steps:
 
 1. Fork this repo.
 
@@ -137,8 +137,7 @@ stdout and exit with exit code `0`.  Here's an example:
           "currency": "USD",
           "balance": "100.23",
           "available-balance": "75.23",
-          "balance-as-of": "AO334",
-          "last-transaction-posted": "2013-07-29T19:22:09.210",
+          "balance-as-of": "2013-07-29T19:22:09.210",
           "transactions": [
             {
               "id": "12394832938403",
