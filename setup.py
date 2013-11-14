@@ -30,5 +30,8 @@ setup(
     ],
     scripts=[
         'bin/banka',
-    ]
+    ],
+    package_data={
+        'mypkg': ['../inst/americafirst.com/*']
+    },
 )

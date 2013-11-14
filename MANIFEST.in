@@ -5,4 +5,5 @@ include AUTHORS
 include .coveragerc
 include requirements.txt
 include sitecustomize.py
-include test-requirement.txt
+include test-requirements.txt
+recursive-include banka/inst *
