@@ -35,7 +35,6 @@ Clone this repo then:
     python setup.py install
 
 
-
 # How to use this repo #
 
 Check if your bank is supported either by looking in the
@@ -70,6 +69,7 @@ If your bank isn't listed, please contribute!  Follow
 4. Submit a pull request.
 
 
+
 # `info.yml` file #
 
 The `info.yml` file should have at least the following information:
@@ -87,6 +87,7 @@ information as you feel comfortable sharing.  A URL to your Github profile
 would be fine.
 
 The file may also contain other information as needed.
+
 
 
 # Writing a Script #
@@ -163,11 +164,16 @@ stdout and exit with exit code `0`.  Here's an example:
 Use stderr for logging.
 
 
-## Running your script during development ##
+## Development ##
 
 Run your script with the credential wrapper:
 
-    banka run path/to/your/script
+    banka run <BANKNAME>/list-accounts
+
+If you are working out of the Git repo, without having installed the package,
+you may need to do this instead:
+
+    PYTHONPATH=. bin/banka run <BANKNAME>/list-accounts
 
 
 
