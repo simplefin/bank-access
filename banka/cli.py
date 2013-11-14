@@ -19,6 +19,11 @@ class RunOptions(usage.Options):
 
     synopsis = 'cmd [arg ...]'
 
+    optFlags = [
+        ('non-package', 'N', "Run a script from the given path rather than "
+                             "relative to the banka/inst directory.")
+    ]
+
     def parseArgs(self, *args):
         self['args'] = args
 
