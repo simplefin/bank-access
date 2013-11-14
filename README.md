@@ -28,11 +28,13 @@ Tell your bank you want SimpleFIN!
 And please contribute a script for your bank!
 
 
+
 # Installation #
 
 Clone this repo then:
 
     python setup.py install
+
 
 
 # How to use this repo #
