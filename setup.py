@@ -1,7 +1,8 @@
 # Copyright (c) The SimpleFIN Team
 # See LICENSE for details.
 
-from distutils.core import setup
+from setuptools import setup
+from pip.req import parse_requirements
 
 import re
 import os
@@ -18,6 +19,21 @@ def getVersion():
         if m:
             return m.groups()[0]
 
+def instFiles():
+    """
+    Get a list of all the institution-specific files.
+    """
+    inst_dir = os.path.join(os.path.dirname(__file__), 'banka/inst')
+    children = os.listdir(inst_dir)
+    return ['inst/%s/*' % (x,) for x in children]
+
+
+def getRequirements():
+    reqs = []
+    for req in parse_requirements('requirements.txt'):
+        reqs.append(str(req.req))
+    return reqs
+
 setup(
     url='none',
     author='Matt Haggard',
@@ -31,7 +47,8 @@ setup(
     scripts=[
         'bin/banka',
     ],
+    install_requires=getRequirements(),
     package_data={
-        'mypkg': ['../inst/americafirst.com/*']
+        'banka': instFiles(),
     },
 )

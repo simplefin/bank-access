@@ -6,3 +6,4 @@ build
 htmlcov/
 dist/
 MANIFEST
+banka.egg-info/
