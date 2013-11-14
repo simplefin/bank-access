@@ -9,6 +9,8 @@ from twisted.python import log
 import os
 from StringIO import StringIO
 
+from banka.inst import directory
+
 
 class StdinProtocol(ProcessProtocol):
     """
@@ -95,3 +97,53 @@ class wrap3Test(TestCase):
             self.assertEqual(result, 10, "Should exit with exit code to "
                              "match the wrapped script")
         return proto.done.addCallback(check)
+
+
+def runScript(executable, args):
+    env = os.environ.copy()
+    env['PYTHONPATH'] = os.path.abspath('..')
+    env['COVERAGE_PROCESS_START'] = os.path.abspath('../.coveragerc')
+    proto = StdinProtocol([])
+    reactor.spawnProcess(proto, executable, args, env=env)
+    return proto
+
+
+class listTest(TestCase):
+
+    timeout = 2
+
+    @defer.inlineCallbacks
+    def test_list(self):
+        """
+        The C{list} command should list institutions.
+        """
+        proto = runScript('../bin/banka', ['banka', 'list'])
+        rc = yield proto.done
+        self.assertEqual(rc, 0)
+
+        self.assertEqual(proto.stderr.getvalue(), '')
+        expected = '\n'.join(directory.names()) + '\n'
+        self.assertEqual(proto.stdout.getvalue(), expected,
+                         "Should write names to stdout")
+
+    @defer.inlineCallbacks
+    def test_listVerbose(self):
+        """
+        The C{list} command in verbose mode should also list the institution
+        name and available scripts.
+        """
+        proto = runScript('../bin/banka', ['banka', 'list', '-v'])
+        rc = yield proto.done
+        self.assertEqual(rc, 0)
+
+        expected_lines = []
+        for name in directory.names():
+            details = directory.details(name)
+            expected_lines.append('%s scripts: %s domain: %s name: %s' % (
+                                  name,
+                                  ','.join(sorted(details['scripts'])),
+                                  details['info']['domain'],
+                                  details['info']['name']))
+        expected = '\n'.join(expected_lines) + '\n'
+        self.assertEqual(proto.stdout.getvalue(), expected,
+                         "Should write names and other deets to stdout")
