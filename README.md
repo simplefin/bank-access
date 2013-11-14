@@ -33,8 +33,8 @@ And please contribute a script for your bank!
 
 ## If you see your bank listed ##
 
-If you see your bank listed in the [`inst` directory](inst/), clone this repo,
-install any dependencies:
+If you see your bank listed in the [`banka/inst` directory](banka/inst/), 
+clone this repo, install any dependencies:
 
     pip install -r requirements.txt
 
@@ -44,15 +44,16 @@ Install `banka`:
 
 then run the script like this:
 
-    banka run inst/<NAME OF YOUR BANK>/list-accounts
+    banka run banka/inst/<NAME OF YOUR BANK>/list-accounts
 
 which will prompt you for your credentials.
 
 
 ## If you don't see your bank listed ##
 
-If you don't see your bank listed in the [`inst` directory](inst/), please 
-contribute!  Follow [CONTRIBUTING.md](CONTRIBUTING.md) and these steps:
+If you don't see your bank listed in the
+[`banka/inst` directory](banka/inst/), please contribute!  Follow
+[CONTRIBUTING.md](CONTRIBUTING.md) and these steps:
 
 1. Fork this repo.
 
@@ -89,7 +90,8 @@ preference, try the following when writing a script:
 
    Check www.ofxhome.com to see if your bank provides an OFX server.  If so,
    writing a script is straightforward.  Use
-   [`inst/americafirst.com`](inst/americafirst.com/) as a model.
+   [`banka/inst/americafirst.com`](banka/inst/americafirst.com/) as a
+   model.
 
 2. OFX file download
 

@@ -22,6 +22,9 @@ clean:
 	-rm .coverage
 	-rm .coverage.*
 	-rm -r htmlcov
+	-rm -r dist
+	-rm -r banka.egg-info
+	-rm -r _trial_temp
 
 test-copyright:
 	@bash util/assertcopyright.sh

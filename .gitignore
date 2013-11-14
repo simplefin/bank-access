@@ -4,3 +4,6 @@ build
 .coverage
 .coverage.*
 htmlcov/
+dist/
+MANIFEST
+banka.egg-info/
