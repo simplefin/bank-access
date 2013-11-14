@@ -22,7 +22,7 @@ class InstitutionDirectory(object):
         """
         Get a list of institution names.
         """
-        return [x.basename() for x in self.fp.children()]
+        return sorted([x.basename() for x in self.fp.children()])
 
     def details(self, name):
         """
