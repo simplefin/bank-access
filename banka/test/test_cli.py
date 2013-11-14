@@ -7,6 +7,9 @@ from twisted.python.filepath import FilePath
 from twisted.python import log
 
 import os
+import json
+import yaml
+
 from StringIO import StringIO
 
 from banka.inst import directory
@@ -28,7 +31,8 @@ class StdinProtocol(ProcessProtocol):
         self.done = defer.Deferred()
 
     def outReceived(self, data):
-        log.msg(repr(data), system='stdout')
+        log.msg(repr(data), system='stdout.repr')
+        log.msg(data, system='stdout')
         self.stdout.write(data)
         if self.responses:
             r = self.responses.pop(0)
@@ -147,3 +151,54 @@ class listTest(TestCase):
         expected = '\n'.join(expected_lines) + '\n'
         self.assertEqual(proto.stdout.getvalue(), expected,
                          "Should write names and other deets to stdout")
+
+    @defer.inlineCallbacks
+    def test_list_json(self):
+        """
+        You can get everything in a json format.
+        """
+        proto = runScript('../bin/banka', ['banka', 'list', '--json'])
+        rc = yield proto.done
+        self.assertEqual(rc, 0)
+
+        expected = {}
+        for name in directory.names():
+            details = directory.details(name)
+            expected[name] = details
+        expected = json.dumps(expected, indent=2) + '\n'
+        self.assertEqual(proto.stdout.getvalue(), expected,
+                         "Should write everything as JSON")
+
+    @defer.inlineCallbacks
+    def test_list_json_include(self):
+        """
+        You can filter the json output to only include the specified names.
+        """
+        proto = runScript('../bin/banka', ['banka', 'list', '--json',
+                                           '--include=americafirst.com'])
+        rc = yield proto.done
+        self.assertEqual(rc, 0)
+
+        expected = {}
+        details = directory.details('americafirst.com')
+        expected[details['dirname']] = details
+        expected = json.dumps(expected, indent=2) + '\n'
+        self.assertEqual(proto.stdout.getvalue(), expected,
+                         "Should write just the chosen inst as JSON")
+
+    @defer.inlineCallbacks
+    def test_list_yaml(self):
+        """
+        You can get everything in a YAML format.
+        """
+        proto = runScript('../bin/banka', ['banka', 'list', '--yaml'])
+        rc = yield proto.done
+        self.assertEqual(rc, 0)
+
+        expected = {}
+        for name in directory.names():
+            details = directory.details(name)
+            expected[name] = details
+        expected = yaml.dump(expected) + '\n'
+        self.assertEqual(proto.stdout.getvalue(), expected,
+                         "Should write everything as YAML")

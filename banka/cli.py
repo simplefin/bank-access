@@ -2,6 +2,8 @@
 # See LICENSE for details.
 import sys
 import getpass
+import json
+import yaml
 from functools import partial
 
 from twisted.python import usage
@@ -54,12 +56,35 @@ class RunOptions(usage.Options):
 class ListOptions(usage.Options):
 
     optFlags = [
-        ('verbose', 'v', "Display name, domain and available scripts"),
+        ('verbose', 'v', "Display name, domain and available scripts."),
+        ('json', 'j', "Print data out as JSON."),
+        ('yaml', 'y', "Print data out as YAML."),
     ]
+
+    def __init__(self):
+        usage.Options.__init__(self)
+        self['names'] = []
+
+    def opt_include(self, arg):
+        """
+        Only include this name (may be specified multiple times).
+        """
+        self['names'].append(arg)
+    opt_i = opt_include
 
     def doCommand(self):
         names = directory.names()
-        if self['verbose']:
+        if self['names']:
+            names = self['names']
+        if self['json'] or self['yaml']:
+            data = {}
+            for name in names:
+                data[name] = directory.details(name)
+            if self['json']:
+                print json.dumps(data, indent=2)
+            else:
+                print yaml.dump(data)
+        elif self['verbose']:
             for name in names:
                 details = directory.details(name)
                 print '%s scripts: %s domain: %s name: %s' % (
