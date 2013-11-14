@@ -4,3 +4,5 @@ build
 .coverage
 .coverage.*
 htmlcov/
+dist/
+MANIFEST
