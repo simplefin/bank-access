@@ -7,7 +7,12 @@ from twisted.python.filepath import FilePath
 from twisted.python import log
 
 import os
+import json
+import yaml
+
 from StringIO import StringIO
+
+from banka.inst import directory
 
 
 class StdinProtocol(ProcessProtocol):
@@ -26,7 +31,8 @@ class StdinProtocol(ProcessProtocol):
         self.done = defer.Deferred()
 
     def outReceived(self, data):
-        log.msg(repr(data), system='stdout')
+        log.msg(repr(data), system='stdout.repr')
+        log.msg(data, system='stdout')
         self.stdout.write(data)
         if self.responses:
             r = self.responses.pop(0)
@@ -95,3 +101,104 @@ class wrap3Test(TestCase):
             self.assertEqual(result, 10, "Should exit with exit code to "
                              "match the wrapped script")
         return proto.done.addCallback(check)
+
+
+def runScript(executable, args):
+    env = os.environ.copy()
+    env['PYTHONPATH'] = os.path.abspath('..')
+    env['COVERAGE_PROCESS_START'] = os.path.abspath('../.coveragerc')
+    proto = StdinProtocol([])
+    reactor.spawnProcess(proto, executable, args, env=env)
+    return proto
+
+
+class listTest(TestCase):
+
+    timeout = 2
+
+    @defer.inlineCallbacks
+    def test_list(self):
+        """
+        The C{list} command should list institutions.
+        """
+        proto = runScript('../bin/banka', ['banka', 'list'])
+        rc = yield proto.done
+        self.assertEqual(rc, 0)
+
+        self.assertEqual(proto.stderr.getvalue(), '')
+        expected = '\n'.join(directory.names()) + '\n'
+        self.assertEqual(proto.stdout.getvalue(), expected,
+                         "Should write names to stdout")
+
+    @defer.inlineCallbacks
+    def test_listVerbose(self):
+        """
+        The C{list} command in verbose mode should also list the institution
+        name and available scripts.
+        """
+        proto = runScript('../bin/banka', ['banka', 'list', '-v'])
+        rc = yield proto.done
+        self.assertEqual(rc, 0)
+
+        expected_lines = []
+        for name in directory.names():
+            details = directory.details(name)
+            expected_lines.append('%s scripts: %s domain: %s name: %s' % (
+                                  name,
+                                  ','.join(sorted(details['scripts'])),
+                                  details['info']['domain'],
+                                  details['info']['name']))
+        expected = '\n'.join(expected_lines) + '\n'
+        self.assertEqual(proto.stdout.getvalue(), expected,
+                         "Should write names and other deets to stdout")
+
+    @defer.inlineCallbacks
+    def test_list_json(self):
+        """
+        You can get everything in a json format.
+        """
+        proto = runScript('../bin/banka', ['banka', 'list', '--json'])
+        rc = yield proto.done
+        self.assertEqual(rc, 0)
+
+        expected = {}
+        for name in directory.names():
+            details = directory.details(name)
+            expected[name] = details
+        expected = json.dumps(expected, indent=2) + '\n'
+        self.assertEqual(proto.stdout.getvalue(), expected,
+                         "Should write everything as JSON")
+
+    @defer.inlineCallbacks
+    def test_list_json_include(self):
+        """
+        You can filter the json output to only include the specified names.
+        """
+        proto = runScript('../bin/banka', ['banka', 'list', '--json',
+                                           '--include=americafirst.com'])
+        rc = yield proto.done
+        self.assertEqual(rc, 0)
+
+        expected = {}
+        details = directory.details('americafirst.com')
+        expected[details['dirname']] = details
+        expected = json.dumps(expected, indent=2) + '\n'
+        self.assertEqual(proto.stdout.getvalue(), expected,
+                         "Should write just the chosen inst as JSON")
+
+    @defer.inlineCallbacks
+    def test_list_yaml(self):
+        """
+        You can get everything in a YAML format.
+        """
+        proto = runScript('../bin/banka', ['banka', 'list', '--yaml'])
+        rc = yield proto.done
+        self.assertEqual(rc, 0)
+
+        expected = {}
+        for name in directory.names():
+            details = directory.details(name)
+            expected[name] = details
+        expected = yaml.dump(expected) + '\n'
+        self.assertEqual(proto.stdout.getvalue(), expected,
+                         "Should write everything as YAML")
