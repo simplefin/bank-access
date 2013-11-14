@@ -6,6 +6,7 @@ from twisted.internet import reactor, defer
 from twisted.python.filepath import FilePath
 from twisted.python import log
 
+import sys
 import os
 import json
 import yaml
@@ -53,24 +54,52 @@ class wrap3Test(TestCase):
 
     timeout = 2
 
-    def test_basic(self):
+    @defer.inlineCallbacks
+    def test_basicPackage(self):
+        """
+        Calling run will run scripts relative to the banka/inst directory
+        by default
+        """
+        root = directory.fp
+
+        temp = root.child('_temp')
+        temp.makedirs()
+        self.addCleanup(temp.remove)
+
+        script = temp.child('foo')
+
+        script.setContent(
+            '#!%s\n'
+            'from banka.prompt import prompt\n'
+            'data = prompt("_login")\n'
+            'print "got %%s" %% (data,)\n' % (sys.executable,))
+
+        proto = runScript('../bin/banka', ['banka', 'run', '_temp/foo'],
+                          ['hey\n'], usePTY=True)
+        rc = yield proto.done
+        self.assertEqual(rc, 0)
+
+        self.assertIn('got hey', proto.stdout.getvalue())
+
+    def test_basicNonPackage(self):
         """
         Calling wrap3 should spawn a process that listens on channel 3 for
         prompts and uses the tty to get answers.
         """
         script_file = FilePath(self.mktemp())
         script_file.setContent(
-            '#!/usr/bin/env python\n'
+            '#!%s\n'
             'from banka.prompt import prompt\n'
             'data = prompt("_login")\n'
-            'print "got %s" % (data,)\n')
+            'print "got %%s" %% (data,)\n' % (sys.executable,))
 
         env = os.environ.copy()
         env['PYTHONPATH'] = os.path.abspath('..')
         env['COVERAGE_PROCESS_START'] = os.path.abspath('../.coveragerc')
         proto = StdinProtocol(['joe\n'])
         reactor.spawnProcess(proto, '../bin/banka',
-                             ['banka', 'run', script_file.path],
+                             ['banka', 'run', '--non-package',
+                              script_file.path],
                              env=env, usePTY=True)
 
         def check(result):
@@ -85,16 +114,17 @@ class wrap3Test(TestCase):
         """
         script_file = FilePath(self.mktemp())
         script_file.setContent(
-            '#!/usr/bin/env python\n'
+            '#!%s\n'
             'import sys\n'
-            'sys.exit(10)\n')
+            'sys.exit(10)\n' % (sys.executable,))
 
         env = os.environ.copy()
         env['PYTHONPATH'] = os.path.abspath('..')
         env['COVERAGE_PROCESS_START'] = os.path.abspath('../.coveragerc')
         proto = StdinProtocol([])
         reactor.spawnProcess(proto, '../bin/banka',
-                             ['banka', 'run', script_file.path],
+                             ['banka', 'run', '--non-package',
+                              script_file.path],
                              env=env)
 
         def check(result):
@@ -103,12 +133,13 @@ class wrap3Test(TestCase):
         return proto.done.addCallback(check)
 
 
-def runScript(executable, args):
+def runScript(executable, args, stdin=[], usePTY=False):
     env = os.environ.copy()
     env['PYTHONPATH'] = os.path.abspath('..')
     env['COVERAGE_PROCESS_START'] = os.path.abspath('../.coveragerc')
-    proto = StdinProtocol([])
-    reactor.spawnProcess(proto, executable, args, env=env)
+    proto = StdinProtocol(stdin)
+    reactor.spawnProcess(proto, executable, args, env=env,
+                         usePTY=usePTY)
     return proto
 
 

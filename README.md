@@ -28,31 +28,35 @@ Tell your bank you want SimpleFIN!
 And please contribute a script for your bank!
 
 
+# Installation #
 
-# How to use this repo #
-
-## If you see your bank listed ##
-
-If you see your bank listed in the [`banka/inst` directory](banka/inst/), 
-clone this repo, install any dependencies:
-
-    pip install -r requirements.txt
-
-Install `banka`:
+Clone this repo then:
 
     python setup.py install
 
-then run the script like this:
 
-    banka run banka/inst/<NAME OF YOUR BANK>/list-accounts
+# How to use this repo #
+
+Check if your bank is supported either by looking in the
+[`banka/inst` directory](banka/inst/) or by installing the package and running:
+
+    banka list
+
+
+
+## If your bank is listed ##
+
+If your bank is listed, then get your transaction data like this:
+
+    banka run <BANK NAME FROM LIST>/list-accounts
 
 which will prompt you for your credentials.
 
 
-## If you don't see your bank listed ##
 
-If you don't see your bank listed in the
-[`banka/inst` directory](banka/inst/), please contribute!  Follow
+## If your bank isn't listed ##
+
+If your bank isn't listed, please contribute!  Follow
 [CONTRIBUTING.md](CONTRIBUTING.md) and these steps:
 
 1. Fork this repo.
@@ -63,6 +67,7 @@ If you don't see your bank listed in the
 3. Write a `list-accounts` script. (See [Writing a Script](#writing-a-script)).
 
 4. Submit a pull request.
+
 
 
 # `info.yml` file #
@@ -77,8 +82,12 @@ The `info.yml` file should have at least the following information:
 
 `maintainers` is a list of people who are willing to maintain the scripts
 within the directory (i.e. test the scripts when the underlying library
-changes or fix them when the bank breaks them).  The file may also contain
-other information as needed.
+changes or fix them when the bank breaks them).  Include as much contact
+information as you feel comfortable sharing.  A URL to your Github profile
+would be fine.
+
+The file may also contain other information as needed.
+
 
 
 # Writing a Script #
@@ -155,11 +164,16 @@ stdout and exit with exit code `0`.  Here's an example:
 Use stderr for logging.
 
 
-## Running your script during development ##
+## Development ##
 
 Run your script with the credential wrapper:
 
-    banka run path/to/your/script
+    banka run <BANKNAME>/list-accounts
+
+If you are working out of the Git repo, without having installed the package,
+you may need to do this instead:
+
+    PYTHONPATH=. bin/banka run <BANKNAME>/list-accounts
 
 
 

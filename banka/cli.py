@@ -1,6 +1,7 @@
 # Copyright (c) The SimpleFIN Team
 # See LICENSE for details.
 import sys
+import os
 import getpass
 import json
 import yaml
@@ -19,6 +20,11 @@ class RunOptions(usage.Options):
 
     synopsis = 'cmd [arg ...]'
 
+    optFlags = [
+        ('non-package', 'N', "Run a script from the given path rather than "
+                             "relative to the banka/inst directory.")
+    ]
+
     def parseArgs(self, *args):
         self['args'] = args
 
@@ -33,6 +39,12 @@ class RunOptions(usage.Options):
         return react(self._doCommand, [self['args']])
 
     def _doCommand(self, reactor, args):
+        script = args[0]
+        rest = args[1:]
+        if not self['non-package']:
+            # relative to banka/inst
+            script = os.path.join(directory.fp.path, script)
+        args = [script] + list(rest)
         prompter = partial(wrap3Prompt, getpass.getpass)
         proto = Wrap3Protocol(prompter, stdout=sys.stdout, stderr=sys.stderr)
         reactor.spawnProcess(proto, args[0], args=args, env=None, childFDs={
