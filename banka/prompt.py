@@ -30,18 +30,29 @@ class _Prompter(object):
     """
 
     def __init__(self, writer=writeTo3, reader=readFromStdin):
+        """
+        @param writer: A function that accepts a prompt dictionary and is
+            responsible for transmitting a corresponding request to whoever
+            should answer the prompt (e.g. the parent process).
+
+        @param reader: A function of no arguments that is called immediately
+            after writing a prompt if an answer is expected.
+        """
         self.writer = writer
         self.reader = reader
 
-    def prompt(self, key):
+    def prompt(self, key, ask_human=True):
         """
         Prompt for some information.
 
         @param key: String key name for this information.
+        @param ask_human: Pass along to he who answers whether or not a human
+            should be asked for the answer.
         """
-        self.writer({
-            'key': key,
-        })
+        msg = {'key': key}
+        if not ask_human:
+            msg['ask_human'] = False
+        self.writer(msg)
         return self.reader()
 
 

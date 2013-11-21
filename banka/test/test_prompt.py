@@ -29,3 +29,16 @@ class PrompterTest(TestCase):
         self.assertEqual(writer, [{"key": "foo"}])
         reader.assert_called_once_with()
         self.assertEqual(r, 'something')
+
+
+    def test_prompt_dontAskHuman(self):
+        """
+        If C{ask_human} is C{False}, then include that in the prompt.
+        """
+        writer = []
+        reader = MagicMock(return_value='something')
+        p = _Prompter(writer.append, reader)
+        r = p.prompt('foo', ask_human=False)
+        self.assertEqual(writer, [{'key': 'foo', 'ask_human': False}])
+        reader.assert_called_once_with()
+        self.assertEqual(r, 'something')

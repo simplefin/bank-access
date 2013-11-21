@@ -195,6 +195,21 @@ prompt for credentials using `banka.prompt.prompt` like this:
 
 **All scripts must** prompt for the specially named `_login` credential
 **first.**
- 
+
+
+## Saving state between runs ##
+
+Your script may need to save state between each run (for instance, cookies
+gathered during screen scraping).  Your script may ask for saved state using
+`banka.prompt.prompt` as in [Asking for credentials](#asking-for-credentials):
+
+    from banka.prompt import prompt
+    state = prompt('_state', ask_human=False)
+
+The script requests the parent to save the state with `banka.prompt.save`
+like this:
+
+    from banka.prompt import save
+    save('_state', "some string of data that should be saved")
 
 
