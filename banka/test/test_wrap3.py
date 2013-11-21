@@ -7,7 +7,7 @@ from twisted.python.failure import Failure
 from StringIO import StringIO
 
 from mock import MagicMock
-from banka.wrap3 import Wrap3Protocol, wrap3Prompt
+from banka.wrap3 import Wrap3Protocol, wrap3Prompt, DataBackedPrompter
 
 
 class Wrap3ProtocolTest(TestCase):
@@ -110,3 +110,16 @@ class wrap3PromptTest(TestCase):
         wrap3Prompt(getpass, proto, '{"key":"name"}\n')
         self.assertEqual(prompts, ['name? '])
         proto.transport.write.assert_called_once_with('"hey"\n')
+
+
+
+class DataBackedPrompterTest(TestCase):
+
+    def test_init(self):
+        """
+        The L{DataBackedPrompter} should have a store and a human-prompting
+        function.
+        """
+        dbp = DataBackedPrompter('store', 'prompt')
+        self.assertEqual(dbp.store, 'store')
+        self.assertEqual(dbp.ask_human, 'prompt')
