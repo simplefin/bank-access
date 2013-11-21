@@ -2,6 +2,7 @@
 # See LICENSE for details.
 
 from setuptools import setup
+from setuptools.command.install import install as _install
 from pip.req import parse_requirements
 
 import re
@@ -34,6 +35,42 @@ def getRequirements():
         reqs.append(str(req.req))
     return reqs
 
+
+def zipTrees(a, b):
+    for child in os.listdir(a):
+        a_child = os.path.join(a, child)
+        b_child = os.path.join(b, child)
+        yield (a_child, b_child)
+        if os.path.isdir(a_child):
+            for x in zipTrees(a_child, b_child):
+                yield x
+
+
+def copyPermissions(src, dst):
+    """
+    For every file in C{dst}, copy the permissions/mode from the corresponding
+    file in C{src}.
+    """
+    import shutil
+    for d, s in zipTrees(dst, src):
+        print 'copy mode to %s' % (d,)
+        shutil.copymode(s, d)
+
+
+inst_files = instFiles()
+
+class install(_install):
+
+    def run(self):
+        _install.run(self)
+        print 'Copy over file mode on inst files'
+        dst_inst_root = os.path.join(self.install_lib, 'banka/inst')
+        src_inst_root = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), 'banka/inst'))
+        copyPermissions(src_inst_root, dst_inst_root)
+        print self.install_lib
+
+
 setup(
     url='none',
     author='Matt Haggard',
@@ -49,6 +86,9 @@ setup(
     ],
     install_requires=getRequirements(),
     package_data={
-        'banka': instFiles(),
+        'banka': inst_files,
     },
+    cmdclass={
+        'install': install,
+    }
 )
