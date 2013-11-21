@@ -5,6 +5,7 @@ Utilities to be used within bank scripts for asking the parent process for
 information.
 
 @var prompt: A function for prompting over the channel 3 medium.
+@var save: A function for saving over the channel 3 medium.
 """
 
 import os
@@ -55,6 +56,23 @@ class _Prompter(object):
         self.writer(msg)
         return self.reader()
 
+    def save(self, key, value):
+        """
+        Indicate that some information should be saved for later retrieval.
+
+        @param key: Key to be used to retrieve data.
+        @param value: Value to save
+        @type value: str
+
+        @return: None
+        """
+        self.writer({
+            'key': key,
+            'action': 'save',
+            'value': value,
+        })
+
 
 _prompter = _Prompter()
 prompt = _prompter.prompt
+save = _prompter.save
