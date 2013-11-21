@@ -33,8 +33,8 @@ And please contribute a script for your bank!
 
 Clone this repo then:
 
+    pip install -r requirements.txt
     python setup.py install
-
 
 
 # How to use this repo #
@@ -50,9 +50,9 @@ Check if your bank is supported either by looking in the
 
 If your bank is listed, then get your transaction data like this:
 
-    banka run <BANK NAME FROM LIST>/list-accounts
+    banka run <BANK DOMAIN>/list-accounts
 
-which will prompt you for your credentials.
+which will prompt you for your credentials and write a JSON string to stdout.
 
 
 
@@ -170,12 +170,12 @@ Use stderr for logging.
 
 Run your script with the credential wrapper:
 
-    banka run <BANKNAME>/list-accounts
+    banka run <BANK DOMAIN>/list-accounts
 
 If you are working out of the Git repo, without having installed the package,
 you may need to do this instead:
 
-    PYTHONPATH=. bin/banka run <BANKNAME>/list-accounts
+    PYTHONPATH=. bin/banka run <BANK DOMAIN>/list-accounts
 
 
 

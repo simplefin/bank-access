@@ -25,6 +25,7 @@ clean:
 	-rm -r dist
 	-rm -r banka.egg-info
 	-rm -r _trial_temp
+	-rm -r build
 
 test-copyright:
 	@bash util/assertcopyright.sh
