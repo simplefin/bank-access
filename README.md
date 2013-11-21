@@ -31,7 +31,11 @@ And please contribute a script for your bank!
 
 # Installation #
 
-Clone this repo then:
+Install directly from Github:
+
+    pip install -e git+https://github.com/simplefin/bank-access.git@master#egg=banka
+
+Or clone this repo then:
 
     pip install -r requirements.txt
     python setup.py install
@@ -40,7 +44,8 @@ Clone this repo then:
 # How to use this repo #
 
 Check if your bank is supported either by looking in the
-[`banka/inst` directory](banka/inst/) or by installing the package and running:
+[`banka/inst` directory](banka/inst/) or by installing the package (as above)
+and running:
 
     banka list
 
