@@ -2,7 +2,7 @@
 Copyright (c) The SimpleFIN Team
 See LICENSE for details.
 -->
-[![Build Status](https://travis-ci.org/simplefin/bank-access.png)](https://travis-ci.org/simplefin/bank-access)
+[![Build Status](https://travis-ci.org/simplefin/bank-access.png?branch=master)](https://travis-ci.org/simplefin/bank-access)
 
 This repository contains a collection of scripts can be used to
 programmatically get bank transaction information.  The scripts herein only
