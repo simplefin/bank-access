@@ -65,10 +65,23 @@ def wrap3Prompt(getpass_fn, proto, line):
     d.addCallback(_gotAnswer, proto)
 
 
+def answererReceiver(getdata_fn, proto, line):
+    """
+    I translate C{line} into keyword arguments for C{getdata_fn} then write
+    the response as JSON to C{proto}'s transport.
+    """
+    kwargs = json.loads(line)
+    d = defer.maybeDeferred(getdata_fn, **kwargs)
+
+    def _gotAnswer(answer, proto):
+        proto.transport.write(json.dumps(answer) + '\n')
+    return d.addCallback(_gotAnswer, proto)
+
+
 class StorebackedAnswerer(object):
     """
     My L{getData} function can be used as a C{ch3_receiver} in
-    L{Wrap3Protocol} if it's wrapped in L{wrapAnswerer).
+    L{Wrap3Protocol} if it's wrapped in L{answererReceiver).
 
     I get my answers to the prompts either from a
     data store or else a human (if possible).

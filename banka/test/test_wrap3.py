@@ -9,6 +9,7 @@ from StringIO import StringIO
 
 from mock import MagicMock
 from banka.wrap3 import Wrap3Protocol, wrap3Prompt, StorebackedAnswerer
+from banka.wrap3 import answererReceiver
 
 
 class Wrap3ProtocolTest(TestCase):
@@ -111,6 +112,22 @@ class wrap3PromptTest(TestCase):
         wrap3Prompt(getpass, proto, '{"key":"name"}\n')
         self.assertEqual(prompts, ['name? '])
         proto.transport.write.assert_called_once_with('"hey"\n')
+
+
+class answererReceiverTest(TestCase):
+
+    def test_basic(self):
+        """
+        Should call the first function with the JSON dictionary line as keyword
+        arguments then write the JSON response to the protocols transport.
+        """
+        proto = MagicMock()
+
+        answerer = MagicMock(return_value=defer.succeed('foo'))
+
+        answererReceiver(answerer, proto, '{"key":"name"}\n')
+        answerer.assert_called_once_with(key='name')
+        proto.transport.write.assert_called_once_with('"foo"\n')
 
 
 class StorebackedAnswererTest(TestCase):
