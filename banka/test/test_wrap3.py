@@ -112,7 +112,6 @@ class wrap3PromptTest(TestCase):
         proto.transport.write.assert_called_once_with('"hey"\n')
 
 
-
 class DataBackedPrompterTest(TestCase):
 
     def test_init(self):
