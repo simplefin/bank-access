@@ -1,5 +1,6 @@
 # Copyright (c) The SimpleFIN Team
 # See LICENSE for details.
+
 from twisted.trial.unittest import TestCase
 from twisted.internet import defer, error
 from twisted.python.failure import Failure
@@ -7,7 +8,7 @@ from twisted.python.failure import Failure
 from StringIO import StringIO
 
 from mock import MagicMock
-from banka.wrap3 import Wrap3Protocol, wrap3Prompt, DataBackedPrompter
+from banka.wrap3 import Wrap3Protocol, wrap3Prompt, StorebackedAnswerer
 
 
 class Wrap3ProtocolTest(TestCase):
@@ -112,13 +113,123 @@ class wrap3PromptTest(TestCase):
         proto.transport.write.assert_called_once_with('"hey"\n')
 
 
-class DataBackedPrompterTest(TestCase):
+class StorebackedAnswererTest(TestCase):
+
+    @defer.inlineCallbacks
+    def getStore(self):
+        """
+        Get a useable store.
+        """
+        from norm import makePool
+        from banka.sql import SQLDataStore, sqlite_patcher
+        pool = yield makePool('sqlite:')
+        yield sqlite_patcher.upgrade(pool)
+        defer.returnValue(SQLDataStore(pool))
+
+    def human(self, answers):
+        def f(prompt_str):
+            return answers[prompt_str]
+        return f
 
     def test_init(self):
         """
-        The L{DataBackedPrompter} should have a store and a human-prompting
+        The L{StorebackedAnswerer} should have a store and a human-prompting
         function.
         """
-        dbp = DataBackedPrompter('store', 'prompt')
+        dbp = StorebackedAnswerer('store', 'prompt')
         self.assertEqual(dbp.store, 'store')
         self.assertEqual(dbp.ask_human, 'prompt')
+
+    @defer.inlineCallbacks
+    def test_getData_login(self):
+        """
+        When asked for _login, prompt the human and save the value for later.
+        """
+        store = yield self.getStore()
+        dbp = StorebackedAnswerer(store, self.human({'_login': 'the login'}))
+        result = yield dbp.getData('_login')
+        self.assertEqual(result, 'the login')
+        self.assertEqual(dbp.login, 'the login')
+
+        # shouldn't store the login
+        self.assertFailure(store.get('the login', '_login'), KeyError)
+
+    @defer.inlineCallbacks
+    def test_getData_login_prompt(self):
+        """
+        The prompt given to the ask_human function can be different than the
+        key.
+        """
+        store = yield self.getStore()
+        dbp = StorebackedAnswerer(store, self.human({'Account number': '123'}))
+
+        result = yield dbp.getData('_login', prompt='Account number')
+        self.assertEqual(result, '123')
+
+    @defer.inlineCallbacks
+    def test_getData_fromHuman(self):
+        """
+        By default, the human is asked for every piece of data.  The data is
+        then stored in the data store.
+        """
+        store = yield self.getStore()
+        dbp = StorebackedAnswerer(store, self.human({
+            '_login': 'foo',
+            'password': 'the password',
+        }))
+
+        yield dbp.getData('_login')
+        password = yield dbp.getData('password')
+        self.assertEqual(password, 'the password', "Should have asked the "
+                         "human for the password")
+
+        stored_password = yield store.get('foo', 'password')
+        self.assertEqual(stored_password, 'the password', "Should have stored"
+                         " the password in the store")
+
+        self.assertEqual(dbp.login, 'foo', "Should not change the login")
+
+    @defer.inlineCallbacks
+    def test_getData_fromHuman_prompt(self):
+        """
+        The prompt to the human can be overridden.
+        """
+        store = yield self.getStore()
+        dbp = StorebackedAnswerer(store, self.human({
+            'The password, please': 'the password',
+        }))
+        dbp.login = 'foo'
+        password = yield dbp.getData('password', 'The password, please')
+        self.assertEqual(password, 'the password', "Should have asked the "
+                         "human for the password")
+
+    @defer.inlineCallbacks
+    def test_getData_secondTime(self):
+        """
+        If the data is in the store, get it from the store and not the human.
+        """
+        store = yield self.getStore()
+        dbp = StorebackedAnswerer(store, self.human({
+            'somekey': 'fake value',
+        }))
+        dbp.login = 'foo'
+
+        # load the store
+        yield store.put('foo', 'somekey', 'real value')
+        result = yield dbp.getData('somekey')
+        self.assertEqual(result, 'real value', "Should get the value from the "
+                         "store if present")
+
+    @defer.inlineCallbacks
+    def test_getData_dontAskHuman(self):
+        """
+        If C{ask_human} is C{False} then don't ask the human.  Instead return
+        None.
+        """
+        store = yield self.getStore()
+        dbp = StorebackedAnswerer(store, self.human({}))
+        dbp.login = 'foo'
+
+        result = yield dbp.getData('some key', ask_human=False)
+        self.assertEqual(result, None, "Not in store and not going to ask "
+                         "the human")

@@ -1,3 +1,6 @@
+# Copyright (c) The SimpleFIN Team
+# See LICENSE for details.
+
 from twisted.internet import defer, threads
 import scrypt
 

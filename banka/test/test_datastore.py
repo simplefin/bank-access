@@ -137,7 +137,6 @@ class KeyczarStoreTest(TestCase):
         pool = yield makePool('sqlite:')
         yield sqlite_patcher.upgrade(pool)
 
-        key_dir = self.mktemp()
         defer.returnValue(SQLDataStore(pool))
 
     @defer.inlineCallbacks

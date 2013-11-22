@@ -63,3 +63,49 @@ def wrap3Prompt(getpass_fn, proto, line):
         proto.transport.write(json.dumps(answer) + '\n')
 
     d.addCallback(_gotAnswer, proto)
+
+
+class StorebackedAnswerer(object):
+    """
+    My L{getData} function can be used as a C{ch3_receiver} in
+    L{Wrap3Protocol} if it's wrapped in L{wrapAnswerer).
+
+    I get my answers to the prompts either from a
+    data store or else a human (if possible).
+
+    @ivar login: The login string to be used when asked for C{'_login'}
+    """
+
+    login = None
+
+    def __init__(self, store, ask_human):
+        self.store = store
+        self.ask_human = ask_human
+
+    @defer.inlineCallbacks
+    def getData(self, key, prompt=None, ask_human=True):
+        """
+        Get a piece of data either from the store or from a human.
+
+        @param key: name of data to get.
+        @param prompt: String prompt to give to the human.  If not given,
+            C{key} will be used instead.
+        @param ask_human: If C{False} then don't ask the human for this data.
+        """
+        prompt = prompt or key
+
+        # handle special _login case
+        if key == '_login':
+            value = self.ask_human(prompt)
+            self.login = value
+            defer.returnValue(value)
+
+        value = None
+        try:
+            value = yield self.store.get(self.login, key)
+        except KeyError:
+            if ask_human:
+                value = self.ask_human(prompt)
+        if value is not None:
+            yield self.store.put(self.login, key, value)
+        defer.returnValue(value)
