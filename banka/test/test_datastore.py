@@ -1,6 +1,12 @@
 # Copyright (c) The SimpleFIN Team
 # See LICENSE for details.
+from twisted.trial.unittest import TestCase
 from twisted.internet import defer
+from twisted.python.filepath import FilePath
+
+from keyczar import keyczart, keyinfo, keyczar
+
+from banka.datastore import KeyczarStore
 
 
 class DataStoreTestMixin(object):
@@ -32,17 +38,6 @@ class DataStoreTestMixin(object):
         yield store.put('id', 'key', 'value')
         res = yield store.get('id', 'key')
         self.assertEqual(res, 'value')
-
-    @defer.inlineCallbacks
-    def test_getAll(self):
-        """
-        You should be able to get all the data for an id.
-        """
-        store = yield self.getEmptyStore()
-        yield store.put('id', 'a', 'apple')
-        yield store.put('id', 'b', 'banana')
-        res = yield store.getAll('id')
-        self.assertEqual(res, {'a': 'apple', 'b': 'banana'})
 
     @defer.inlineCallbacks
     def test_put_overwrite(self):
@@ -108,3 +103,56 @@ class DataStoreTestMixin(object):
         yield store.delete('id')
         self.assertFailure(store.get('id', 'foo'), KeyError)
         self.assertFailure(store.get('id', 'bar'), KeyError)
+
+
+class KeyczarStoreFunctionalTest(TestCase, DataStoreTestMixin):
+
+    timeout = 20
+
+    @defer.inlineCallbacks
+    def getEmptyStore(self):
+        from norm import makePool
+        from banka.sql import SQLDataStore, sqlite_patcher
+        pool = yield makePool('sqlite:')
+        yield sqlite_patcher.upgrade(pool)
+
+        # make keyczar key set
+        key_dir = self.mktemp()
+        FilePath(key_dir).makedirs()
+        keyczart.Create(key_dir, 'test key', keyinfo.DECRYPT_AND_ENCRYPT)
+        keyczart.AddKey(key_dir, keyinfo.PRIMARY)
+        crypter = keyczar.Crypter.Read(key_dir)
+
+        defer.returnValue(KeyczarStore(SQLDataStore(pool), crypter))
+
+
+class KeyczarStoreTest(TestCase):
+
+    timeout = 10
+
+    @defer.inlineCallbacks
+    def getEmptyStore(self):
+        from norm import makePool
+        from banka.sql import SQLDataStore, sqlite_patcher
+        pool = yield makePool('sqlite:')
+        yield sqlite_patcher.upgrade(pool)
+
+        key_dir = self.mktemp()
+        defer.returnValue(SQLDataStore(pool))
+
+    @defer.inlineCallbacks
+    def test_encrypted(self):
+        """
+        The data should not be accessible from the base store.
+        """
+        # make keyczar key set
+        key_dir = self.mktemp()
+        FilePath(key_dir).makedirs()
+        keyczart.Create(key_dir, 'test key', keyinfo.DECRYPT_AND_ENCRYPT)
+        keyczart.AddKey(key_dir, keyinfo.PRIMARY)
+        crypter = keyczar.Crypter.Read(key_dir)
+
+        base_store = yield self.getEmptyStore()
+        enc_store = KeyczarStore(base_store, crypter)
+        yield enc_store.put('id', 'key', 'value')
+        self.assertFailure(base_store.get('id', 'key'), KeyError)

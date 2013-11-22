@@ -31,7 +31,7 @@ class SQLDataStore(object):
         """
         return self.pool.runOperation('replace into data (id, key, value) '
                                       'values (?,?,?)',
-                                      (id, key, value))
+                                      (buffer(id), buffer(key), buffer(value)))
 
     def get(self, id, key):
         """
@@ -40,25 +40,14 @@ class SQLDataStore(object):
         @raise KeyError: (Deferred) if no such id or key is in the database.
         """
         d = self.pool.runQuery('select value from data where id=? and key=?',
-                               (id, key))
+                               (buffer(id), buffer(key)))
 
         def one(rows):
             try:
-                return rows[0][0]
+                return str(rows[0][0])
             except:
                 raise KeyError((id, key))
         d.addCallback(one)
-        return d
-
-    def getAll(self, id):
-        """
-        Get a dictionary of all key-value pairs for an id.
-
-        @param id: ID as given in L{put}.
-        """
-        d = self.pool.runQuery('select key, value from data where id=?',
-                               (id,))
-        d.addCallback(dict)
         return d
 
     def delete(self, id, key=None):
@@ -66,11 +55,12 @@ class SQLDataStore(object):
         Delete a single key-value pair or and entire set of key-value pairs.
         """
         if key is None:
-            return self.pool.runOperation('delete from data where id=?', (id,))
+            return self.pool.runOperation('delete from data where id=?',
+                                          (buffer(id),))
         else:
             return self.pool.runOperation(
                 'delete from data where id=? and key=?',
-                (id, key))
+                (buffer(id), buffer(key)))
 
 
 sqlite_patcher = Patcher()

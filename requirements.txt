@@ -6,4 +6,6 @@ Jinja2==2.7.1
 ofxparse==0.14
 requests==2.0.1
 PyYAML==3.10
+scrypt==0.6.1
+python-keyczar==0.71c
 -e git+https://github.com/iffy/norm.git@v1.5.4#egg=norm-1.5.4
