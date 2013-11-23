@@ -5,7 +5,55 @@ from twisted.internet import defer, threads
 import scrypt
 
 
-class KeyczarStore(object):
+class _HashingCryptingStore(object):
+
+    def _hash(self, data):
+        raise NotImplemented
+
+    def _encrypt(self, plaintext):
+        raise NotImplemented
+
+    def _decrypt(self, ciphertext):
+        raise NotImplemented
+
+    def _expand(self, args, func):
+        print func, args
+        return func(*args)
+
+    def put(self, id, key, value):
+        print 'put?', id, key, value
+        hashed_id = self._hash(id)
+        hashed_key = self._hash(key)
+        encrypted_value = self._encrypt(value)
+
+        print 'just before put'
+        dlist = defer.gatherResults([hashed_id, hashed_key, encrypted_value])
+
+        dlist.addCallback(self._expand, self.store.put)
+        def eb(errs):
+            print 'ERROR', errs
+        dlist.addErrback(eb)
+        return dlist
+
+    def get(self, id, key):
+        hashed_id = self._hash(id)
+        hashed_key = self._hash(key)
+        dlist = defer.gatherResults([hashed_id, hashed_key])
+        dlist.addCallback(self._expand, self.store.get)
+        dlist.addCallback(self._decrypt)
+        return dlist
+
+    def delete(self, id, key=None):
+        hashed_id = self._hash(id)
+        hashed_key = defer.succeed(None)
+        if key is not None:
+            hashed_key = self._hash(key)
+        dlist = defer.gatherResults([hashed_id, hashed_key])
+        dlist.addCallback(self._expand, self.store.delete)
+        return dlist
+
+
+class KeyczarStore(_HashingCryptingStore):
     """
     I wrap another data store such that everything is encrypted when
     stored in the wrapped store.
@@ -30,30 +78,28 @@ class KeyczarStore(object):
     def _decrypt(self, ciphertext):
         return threads.deferToThread(self.crypter.Decrypt, ciphertext)
 
-    def _expand(self, args, func):
-        return func(*args)
 
-    def put(self, id, key, value):
-        hashed_id = self._hash(id)
-        hashed_key = self._hash(key)
-        encrypted_value = self._encrypt(value)
+class PasswordStore(_HashingCryptingStore):
+    """
+    I wrap another data store such that everything is encrypted with a
+    password when stored in the store.
+    """
 
-        dlist = defer.gatherResults([hashed_id, hashed_key, encrypted_value])
-        return dlist.addCallback(self._expand, self.store.put)
+    salt = 'non-random salt for PasswordStore'
 
-    def get(self, id, key):
-        hashed_id = self._hash(id)
-        hashed_key = self._hash(key)
-        dlist = defer.gatherResults([hashed_id, hashed_key])
-        dlist.addCallback(self._expand, self.store.get)
-        dlist.addCallback(self._decrypt)
-        return dlist
+    def __init__(self, store, password):
+        """
+        @param store: Another data store (such as an SQL store).
+        @param password: A string password
+        """
+        self.store = store
+        self.password = password
 
-    def delete(self, id, key=None):
-        hashed_id = self._hash(id)
-        hashed_key = defer.succeed(None)
-        if key is not None:
-            hashed_key = self._hash(key)
-        dlist = defer.gatherResults([hashed_id, hashed_key])
-        dlist.addCallback(self._expand, self.store.delete)
-        return dlist
+    def _hash(self, data):
+        return threads.deferToThread(scrypt.hash, data, self.salt)
+
+    def _encrypt(self, plaintext):
+        return threads.deferToThread(scrypt.encrypt, plaintext, self.password)
+
+    def _decrypt(self, ciphertext):
+        return threads.deferToThread(scrypt.decrypt, ciphertext, self.password)

@@ -6,7 +6,7 @@ from twisted.python.filepath import FilePath
 
 from keyczar import keyczart, keyinfo, keyczar
 
-from banka.datastore import KeyczarStore
+from banka.datastore import KeyczarStore, PasswordStore
 
 
 class DataStoreTestMixin(object):
@@ -155,3 +155,16 @@ class KeyczarStoreTest(TestCase):
         enc_store = KeyczarStore(base_store, crypter)
         yield enc_store.put('id', 'key', 'value')
         self.assertFailure(base_store.get('id', 'key'), KeyError)
+
+
+class PasswordStoreFunctionalTest(TestCase, DataStoreTestMixin):
+
+    timeout = 20
+
+    @defer.inlineCallbacks
+    def getEmptyStore(self):
+        from norm import makePool
+        from banka.sql import SQLDataStore, sqlite_patcher
+        pool = yield makePool('sqlite:')
+        yield sqlite_patcher.upgrade(pool)
+        defer.returnValue(PasswordStore(SQLDataStore(pool), 'password'))

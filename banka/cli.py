@@ -7,10 +7,13 @@ import json
 import yaml
 from functools import partial
 
+from twisted.internet import defer
 from twisted.python import usage
 
 from banka.inst import directory
-from banka.wrap3 import Wrap3Protocol, wrap3Prompt
+from banka.wrap3 import Wrap3Protocol, wrap3Prompt, answererReceiver
+from banka.wrap3 import StorebackedAnswerer
+from banka.datastore import PasswordStore
 
 
 #------------------------------------------------------------------------------
@@ -22,7 +25,15 @@ class RunOptions(usage.Options):
 
     optFlags = [
         ('non-package', 'N', "Run a script from the given path rather than "
-                             "relative to the banka/inst directory.")
+                             "relative to the banka/inst directory."),
+    ]
+
+    optParameters = [
+        ('store', 's', None,
+            "Database URI to store things in.  "
+            "If provided, "
+            "you will be prompted for a password "
+            "(which will be used to encrypt stored data)."),
     ]
 
     def parseArgs(self, *args):
@@ -39,14 +50,41 @@ class RunOptions(usage.Options):
         return react(self._doCommand, [self['args']])
 
     def _doCommand(self, reactor, args):
+        if self['store']:
+            return self._runWithStore(reactor, args)
+        else:
+            return self._runWithoutStore(reactor, args)
+
+    @defer.inlineCallbacks
+    def _runWithStore(self, reactor, args):
+        from norm import makePool
+        from banka.sql import sqlite_patcher, SQLDataStore
+        password = getpass.getpass('Data encryption password? ')
+        pool = yield makePool(self['store'])
+        yield sqlite_patcher.upgrade(pool)
+        store = SQLDataStore(pool)
+        enc_store = PasswordStore(store, password)
+
+        # XXX put this elsewhere
+        def asker(x):
+            return getpass.getpass(x).encode('utf-8')
+        answerer = StorebackedAnswerer(enc_store, asker)
+        ch3_receiver = partial(answererReceiver, answerer.doAction)
+        r = yield self._run(reactor, args, ch3_receiver)
+        defer.returnValue(r)
+
+    def _runWithoutStore(self, reactor, args):
+        ch3_receiver = partial(wrap3Prompt, getpass.getpass)
+        return self._run(reactor, args, ch3_receiver)
+
+    def _run(self, reactor, args, ch3_receiver):
         script = args[0]
         rest = args[1:]
         if not self['non-package']:
             # relative to banka/inst
             script = os.path.join(directory.fp.path, script)
         args = [script] + list(rest)
-        prompter = partial(wrap3Prompt, getpass.getpass)
-        proto = Wrap3Protocol(prompter, stdout=sys.stdout, stderr=sys.stderr)
+        proto = Wrap3Protocol(ch3_receiver, stdout=sys.stdout, stderr=sys.stderr)
         reactor.spawnProcess(proto, args[0], args=args, env=None, childFDs={
             0: 'w',
             1: 'r',

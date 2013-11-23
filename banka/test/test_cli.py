@@ -14,6 +14,8 @@ import yaml
 from StringIO import StringIO
 
 from banka.inst import directory
+from banka.sql import SQLDataStore
+from banka.datastore import PasswordStore
 
 
 class StdinProtocol(ProcessProtocol):
@@ -35,7 +37,7 @@ class StdinProtocol(ProcessProtocol):
         log.msg(repr(data), system='stdout.repr')
         log.msg(data, system='stdout')
         self.stdout.write(data)
-        if self.responses:
+        if self.responses and data.strip():
             r = self.responses.pop(0)
             log.msg(repr(r), system='stdin')
             self.transport.write(r)
@@ -50,7 +52,7 @@ class StdinProtocol(ProcessProtocol):
         self.done.callback(status.value.exitCode)
 
 
-class wrap3Test(TestCase):
+class runTest(TestCase):
 
     timeout = 2
 
@@ -83,7 +85,7 @@ class wrap3Test(TestCase):
 
     def test_basicNonPackage(self):
         """
-        Calling wrap3 should spawn a process that listens on channel 3 for
+        Calling run should spawn a process that listens on channel 3 for
         prompts and uses the tty to get answers.
         """
         script_file = FilePath(self.mktemp())
@@ -106,6 +108,50 @@ class wrap3Test(TestCase):
             stdout_lines = proto.stdout.getvalue().split('\r\n')
             self.assertIn('got joe', stdout_lines)
         return proto.done.addCallback(check)
+
+    @defer.inlineCallbacks
+    def test_store(self):
+        """
+        You can specify an SQL database URI to store things in.  If specified,
+        it will ask for a password to encrypt things.
+        """
+        script1 = FilePath(self.mktemp())
+        script1.setContent(
+            '#!%s\n'
+            'from banka.prompt import prompt, save\n'
+            'login = prompt("_login")\n'
+            '_ = save("foo", "value")\n'
+            'foo = prompt("foo")\n'
+            'print "got %%r %%r" %% (login, foo)\n' % (sys.executable,))
+
+        sqlite_path = self.mktemp()
+        sqlite_uri = 'sqlite:' + sqlite_path
+
+        env = os.environ.copy()
+        env['PYTHONPATH'] = os.path.abspath('..')
+        env['COVERAGE_PROCESS_START'] = os.path.abspath('../.coveragerc')
+        proto = StdinProtocol(['password\n', 'joe\n'])
+        reactor.spawnProcess(
+            proto,
+            '../bin/banka',
+            ['banka', 'run',
+            '--store', sqlite_uri,
+            '--non-package', script1.path],
+            env=env, usePTY=True
+        )
+
+        yield proto.done
+
+        stdout_lines = proto.stdout.getvalue().split('\r\n')
+        self.assertIn("got 'joe' 'value'", stdout_lines)
+
+        # decrypt some stuff with the password
+        pool = yield makePool(sqlite_uri)
+        sql_store = SQLDataStore(pool)
+        store = PasswordStore(sql_store, 'password')
+
+        foo = yield store.get('joe', 'foo')
+        self.assertEqual(foo, 'value', "Should have stored the encrypted data")
 
     def test_error(self):
         """

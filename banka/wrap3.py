@@ -74,6 +74,7 @@ def answererReceiver(getdata_fn, proto, line):
     d = defer.maybeDeferred(getdata_fn, **kwargs)
 
     def _gotAnswer(answer, proto):
+        print 'writing answer: %r' % (answer,)
         proto.transport.write(json.dumps(answer) + '\n')
     return d.addCallback(_gotAnswer, proto)
 
@@ -99,6 +100,7 @@ class StorebackedAnswerer(object):
         """
         Handle a data request.
         """
+        print 'doAction(%r, %r)' % (args, kwargs)
         action = kwargs.pop('action', 'prompt')
         method = getattr(self, 'do_' + action)
         return method(*args, **kwargs)
@@ -113,18 +115,24 @@ class StorebackedAnswerer(object):
             C{key} will be used instead.
         @param ask_human: If C{False} then don't ask the human for this data.
         """
+        # XXX untested
         prompt = prompt or key
+        key = key.encode('utf-8')
+        prompt = prompt.encode('utf-8')
 
         # handle special _login case
         if key == '_login':
             value = self.ask_human(prompt)
+            print 'login', repr(value)
             self.login = value
             defer.returnValue(value)
 
         value = None
         try:
+            print 'store.get(%r, %r)' % (self.login, key)
             value = yield self.store.get(self.login, key)
         except KeyError:
+            print 'not in store'
             if ask_human:
                 value = self.ask_human(prompt)
         if value is not None:
@@ -135,4 +143,8 @@ class StorebackedAnswerer(object):
         """
         Save some data in the store.
         """
+        # XXX untested
+        key = key.encode('utf-8')
+        value = value.encode('utf-8')
+        print 'saving to store', key, value
         return self.store.put(self.login, key, value)
