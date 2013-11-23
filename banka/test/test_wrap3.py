@@ -113,6 +113,18 @@ class wrap3PromptTest(TestCase):
         self.assertEqual(prompts, ['name? '])
         proto.transport.write.assert_called_once_with('"hey"\n')
 
+    def test_save(self):
+        """
+        Saves should be ignored because there's nothing to save to.
+        """
+        proto = MagicMock()
+        getpass = MagicMock()
+        wrap3Prompt(getpass, proto, '{"key":"name","action":"save"}\n')
+        self.assertEqual(getpass.call_count, 0, "Should not prompt for "
+                         "save action")
+        self.assertEqual(proto.transport.write.call_count, 0, "Should not "
+                         "write anything back for save action")
+
 
 class answererReceiverTest(TestCase):
 

@@ -10,13 +10,13 @@ class _HashingCryptingStore(object):
     _sem = None
 
     def _hash(self, data):
-        raise NotImplemented
+        raise NotImplementedError
 
     def _encrypt(self, plaintext):
-        raise NotImplemented
+        raise NotImplementedError
 
     def _decrypt(self, ciphertext):
-        raise NotImplemented
+        raise NotImplementedError
 
     def _semaphore(self):
         if not self._sem:

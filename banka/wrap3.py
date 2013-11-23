@@ -56,13 +56,15 @@ def wrap3Prompt(getpass_fn, proto, line):
     @param line: Line of data containing some JSON.
     """
     data = json.loads(line)
-    prompt = '%s? ' % (data['key'],)
-    d = defer.maybeDeferred(getpass_fn, prompt)
+    action = data.get('action', 'prompt')
+    if action not in ['save']:
+        prompt = '%s? ' % (data['key'],)
+        d = defer.maybeDeferred(getpass_fn, prompt)
 
-    def _gotAnswer(answer, proto):
-        proto.transport.write(json.dumps(answer) + '\n')
+        def _gotAnswer(answer, proto):
+            proto.transport.write(json.dumps(answer) + '\n')
 
-    d.addCallback(_gotAnswer, proto)
+        d.addCallback(_gotAnswer, proto)
 
 
 def answererReceiver(getdata_fn, proto, line):
