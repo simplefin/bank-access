@@ -158,13 +158,13 @@ class StorebackedAnswererTest(TestCase):
         self.assertEqual(dbp.ask_human, 'prompt')
 
     @defer.inlineCallbacks
-    def test_getData_login(self):
+    def test_doAction_login(self):
         """
         When asked for _login, prompt the human and save the value for later.
         """
         store = yield self.getStore()
         dbp = StorebackedAnswerer(store, self.human({'_login': 'the login'}))
-        result = yield dbp.getData('_login')
+        result = yield dbp.doAction('_login')
         self.assertEqual(result, 'the login')
         self.assertEqual(dbp.login, 'the login')
 
@@ -172,7 +172,7 @@ class StorebackedAnswererTest(TestCase):
         self.assertFailure(store.get('the login', '_login'), KeyError)
 
     @defer.inlineCallbacks
-    def test_getData_login_prompt(self):
+    def test_doAction_login_prompt(self):
         """
         The prompt given to the ask_human function can be different than the
         key.
@@ -180,11 +180,11 @@ class StorebackedAnswererTest(TestCase):
         store = yield self.getStore()
         dbp = StorebackedAnswerer(store, self.human({'Account number': '123'}))
 
-        result = yield dbp.getData('_login', prompt='Account number')
+        result = yield dbp.doAction('_login', prompt='Account number')
         self.assertEqual(result, '123')
 
     @defer.inlineCallbacks
-    def test_getData_fromHuman(self):
+    def test_doAction_fromHuman(self):
         """
         By default, the human is asked for every piece of data.  The data is
         then stored in the data store.
@@ -195,8 +195,8 @@ class StorebackedAnswererTest(TestCase):
             'password': 'the password',
         }))
 
-        yield dbp.getData('_login')
-        password = yield dbp.getData('password')
+        yield dbp.doAction('_login')
+        password = yield dbp.doAction('password')
         self.assertEqual(password, 'the password', "Should have asked the "
                          "human for the password")
 
@@ -207,7 +207,7 @@ class StorebackedAnswererTest(TestCase):
         self.assertEqual(dbp.login, 'foo', "Should not change the login")
 
     @defer.inlineCallbacks
-    def test_getData_fromHuman_prompt(self):
+    def test_doAction_fromHuman_prompt(self):
         """
         The prompt to the human can be overridden.
         """
@@ -216,12 +216,12 @@ class StorebackedAnswererTest(TestCase):
             'The password, please': 'the password',
         }))
         dbp.login = 'foo'
-        password = yield dbp.getData('password', 'The password, please')
+        password = yield dbp.doAction('password', 'The password, please')
         self.assertEqual(password, 'the password', "Should have asked the "
                          "human for the password")
 
     @defer.inlineCallbacks
-    def test_getData_secondTime(self):
+    def test_doAction_secondTime(self):
         """
         If the data is in the store, get it from the store and not the human.
         """
@@ -233,12 +233,12 @@ class StorebackedAnswererTest(TestCase):
 
         # load the store
         yield store.put('foo', 'somekey', 'real value')
-        result = yield dbp.getData('somekey')
+        result = yield dbp.doAction('somekey')
         self.assertEqual(result, 'real value', "Should get the value from the "
                          "store if present")
 
     @defer.inlineCallbacks
-    def test_getData_dontAskHuman(self):
+    def test_doAction_dontAskHuman(self):
         """
         If C{ask_human} is C{False} then don't ask the human.  Instead return
         None.
@@ -247,6 +247,20 @@ class StorebackedAnswererTest(TestCase):
         dbp = StorebackedAnswerer(store, self.human({}))
         dbp.login = 'foo'
 
-        result = yield dbp.getData('some key', ask_human=False)
+        result = yield dbp.doAction('some key', ask_human=False)
         self.assertEqual(result, None, "Not in store and not going to ask "
                          "the human")
+
+    @defer.inlineCallbacks
+    def test_doAction_save(self):
+        """
+        If action is C{'save'} then save the data in the store without any
+        human interaction.
+        """
+        store = yield self.getStore()
+        dbp = StorebackedAnswerer(store, self.human({}))
+        dbp.login = 'foo'
+
+        result = yield dbp.doAction('key', action='save', value='some value')
+        value = yield store.get('foo', 'key')
+        self.assertEqual(value, 'some value', "Should save in store")

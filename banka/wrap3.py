@@ -80,7 +80,7 @@ def answererReceiver(getdata_fn, proto, line):
 
 class StorebackedAnswerer(object):
     """
-    My L{getData} function can be used as a C{ch3_receiver} in
+    My L{doAction} function can be used as a C{ch3_receiver} in
     L{Wrap3Protocol} if it's wrapped in L{answererReceiver).
 
     I get my answers to the prompts either from a
@@ -95,8 +95,16 @@ class StorebackedAnswerer(object):
         self.store = store
         self.ask_human = ask_human
 
+    def doAction(self, *args, **kwargs):
+        """
+        Handle a data request.
+        """
+        action = kwargs.pop('action', 'prompt')
+        method = getattr(self, 'do_' + action)
+        return method(*args, **kwargs)
+
     @defer.inlineCallbacks
-    def getData(self, key, prompt=None, ask_human=True):
+    def do_prompt(self, key, prompt=None, ask_human=True):
         """
         Get a piece of data either from the store or from a human.
 
@@ -122,3 +130,9 @@ class StorebackedAnswerer(object):
         if value is not None:
             yield self.store.put(self.login, key, value)
         defer.returnValue(value)
+
+    def do_save(self, key, value):
+        """
+        Save some data in the store.
+        """
+        return self.store.put(self.login, key, value)
