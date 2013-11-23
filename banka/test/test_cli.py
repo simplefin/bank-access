@@ -42,8 +42,6 @@ class StdinProtocol(ProcessProtocol):
             r = self.responses.pop(0)
             log.msg(repr(r), system='stdin')
             self.transport.write(r)
-            if not self.responses:
-                self.transport.closeStdin()
 
     def errReceived(self, data):
         log.msg(repr(data), system='stderr')
@@ -55,7 +53,7 @@ class StdinProtocol(ProcessProtocol):
 
 class runTest(TestCase):
 
-    timeout = 8
+    timeout = 30
 
     @defer.inlineCallbacks
     def test_basicPackage(self):
@@ -121,7 +119,7 @@ class runTest(TestCase):
             '#!%s\n'
             'from banka.prompt import prompt, save\n'
             'login = prompt("_login")\n'
-            '_ = save("foo", "value")\n'
+            '_ = save("foo", u"\N{SNOWMAN}value")\n'
             'foo = prompt("foo")\n'
             'print "got %%r %%r" %% (login, foo)\n' % (sys.executable,))
 
@@ -146,7 +144,8 @@ class runTest(TestCase):
         yield proto.done
 
         stdout_lines = proto.stdout.getvalue().split('\r\n')
-        self.assertIn("got 'joe' 'value'", stdout_lines)
+        self.assertIn("got %r %r" % (u'joe', u'\N{SNOWMAN}value'),
+                      stdout_lines)
 
         # decrypt some stuff with the password
         pool = yield makePool(sqlite_uri)
@@ -154,7 +153,8 @@ class runTest(TestCase):
         store = PasswordStore(sql_store, 'password')
 
         foo = yield store.get('joe', 'foo')
-        self.assertEqual(foo, 'value', "Should have stored the encrypted data")
+        self.assertEqual(foo, u'\N{SNOWMAN}value'.encode('utf-8'),
+                         "Should have stored the encrypted data")
 
     def test_error(self):
         """

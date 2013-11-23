@@ -129,6 +129,20 @@ class answererReceiverTest(TestCase):
         answerer.assert_called_once_with(key='name')
         proto.transport.write.assert_called_once_with('"foo"\n')
 
+    def test_save(self):
+        """
+        Calls to C{'save'} should not cause anything to be written to the
+        transport.
+        """
+        proto = MagicMock()
+
+        answerer = MagicMock(return_value=defer.succeed('foo'))
+
+        answererReceiver(answerer, proto, '{"key":"name","action":"save"}\n')
+        answerer.assert_called_once_with(key='name', action='save')
+        self.assertEqual(proto.transport.write.call_count, 0, "Should not "
+                         "write anything back on save")
+
 
 class StorebackedAnswererTest(TestCase):
 

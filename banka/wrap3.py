@@ -72,9 +72,11 @@ def answererReceiver(getdata_fn, proto, line):
     """
     kwargs = json.loads(line)
     d = defer.maybeDeferred(getdata_fn, **kwargs)
+    action = kwargs.get('action', 'prompt')
 
     def _gotAnswer(answer, proto):
-        proto.transport.write(json.dumps(answer) + '\n')
+        if action not in ['save']:
+            proto.transport.write(json.dumps(answer) + '\n')
     return d.addCallback(_gotAnswer, proto)
 
 

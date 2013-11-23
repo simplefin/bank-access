@@ -29,9 +29,11 @@ class SQLDataStore(object):
         @param value: value
         @type value: str
         """
-        return self.pool.runOperation('replace into data (id, key, value) '
-                                      'values (?,?,?)',
-                                      (buffer(id), buffer(key), buffer(value)))
+        d = self.pool.runOperation(
+            'replace into data (id, key, value) values (?,?,?)',
+            (buffer(id), buffer(key), buffer(value)))
+        d.addCallback(lambda x: None)
+        return d
 
     def get(self, id, key):
         """
@@ -55,12 +57,13 @@ class SQLDataStore(object):
         Delete a single key-value pair or and entire set of key-value pairs.
         """
         if key is None:
-            return self.pool.runOperation('delete from data where id=?',
-                                          (buffer(id),))
+            d = self.pool.runOperation(
+                'delete from data where id=?', (buffer(id),))
         else:
-            return self.pool.runOperation(
+            d = self.pool.runOperation(
                 'delete from data where id=? and key=?',
                 (buffer(id), buffer(key)))
+        return d.addCallback(lambda x: None)
 
 
 sqlite_patcher = Patcher()
