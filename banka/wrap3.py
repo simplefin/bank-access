@@ -4,7 +4,6 @@ from StringIO import StringIO
 import json
 from twisted.internet.protocol import ProcessProtocol
 from twisted.internet import defer
-from twisted.python import log
 
 
 class Wrap3Protocol(ProcessProtocol):
@@ -133,7 +132,7 @@ class StorebackedAnswerer(object):
         value = None
         try:
             value = yield self.store.get(login, key)
-        except KeyError as e:
+        except KeyError:
             if ask_human:
                 value = _encode(self.ask_human(prompt))
         if value is not None:

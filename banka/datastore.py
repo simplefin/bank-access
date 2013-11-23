@@ -39,16 +39,18 @@ class _HashingCryptingStore(object):
         hashed_key = self._hash(key)
         encrypted_value = self._encrypt(value)
 
-        return self._lockRunDeferredArgs(
+        d = self._lockRunDeferredArgs(
             self.store.put,
             hashed_id,
             hashed_key,
             encrypted_value)
+        d.addCallback(lambda x: None)
+        return d
 
     def get(self, id, key):
         hashed_id = self._hash(id)
         hashed_key = self._hash(key)
-        
+
         d = self._lockRunDeferredArgs(self.store.get, hashed_id, hashed_key)
         d.addCallback(self._decrypt)
         return d
@@ -59,11 +61,13 @@ class _HashingCryptingStore(object):
         if key is not None:
             hashed_key = self._hash(key)
 
-        return self._lockRunDeferredArgs(
+        d = self._lockRunDeferredArgs(
             self.store.delete,
             hashed_id,
             hashed_key
         )
+        d.addCallback(lambda x: None)
+        return d
 
 
 class KeyczarStore(_HashingCryptingStore):

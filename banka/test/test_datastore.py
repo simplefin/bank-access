@@ -27,7 +27,8 @@ class DataStoreTestMixin(object):
         and id, into the store.
         """
         store = yield self.getEmptyStore()
-        yield store.put('id', 'key', 'value')
+        val = yield store.put('id', 'key', 'value')
+        self.assertEqual(val, None, "put must return None")
 
     @defer.inlineCallbacks
     def test_get(self):
@@ -89,8 +90,9 @@ class DataStoreTestMixin(object):
         """
         store = yield self.getEmptyStore()
         yield store.put('id', 'foo', 'foo')
-        yield store.delete('id', 'foo')
+        res = yield store.delete('id', 'foo')
         self.assertFailure(store.get('id', 'foo'), KeyError)
+        self.assertEqual(res, None, 'delete must return None')
 
     @defer.inlineCallbacks
     def test_delete_id(self):

@@ -85,7 +85,8 @@ class RunOptions(usage.Options):
             # relative to banka/inst
             script = os.path.join(directory.fp.path, script)
         args = [script] + list(rest)
-        proto = Wrap3Protocol(ch3_receiver, stdout=sys.stdout, stderr=sys.stderr)
+        proto = Wrap3Protocol(ch3_receiver,
+                              stdout=sys.stdout, stderr=sys.stderr)
         reactor.spawnProcess(proto, args[0], args=args, env=None, childFDs={
             0: 'w',
             1: 'r',

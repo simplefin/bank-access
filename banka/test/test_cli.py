@@ -13,6 +13,8 @@ import yaml
 
 from StringIO import StringIO
 
+from norm import makePool
+
 from banka.inst import directory
 from banka.sql import SQLDataStore
 from banka.datastore import PasswordStore
@@ -53,7 +55,7 @@ class StdinProtocol(ProcessProtocol):
 
 class runTest(TestCase):
 
-    timeout = 2
+    timeout = 8
 
     @defer.inlineCallbacks
     def test_basicPackage(self):
@@ -133,9 +135,11 @@ class runTest(TestCase):
         reactor.spawnProcess(
             proto,
             '../bin/banka',
-            ['banka', 'run',
-            '--store', sqlite_uri,
-            '--non-package', script1.path],
+            [
+                'banka', 'run',
+                '--store', sqlite_uri,
+                '--non-package', script1.path,
+            ],
             env=env, usePTY=True
         )
 

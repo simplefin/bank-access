@@ -276,7 +276,7 @@ class StorebackedAnswererTest(TestCase):
         dbp = StorebackedAnswerer(store, self.human({}))
         dbp.login = 'foo'
 
-        result = yield dbp.doAction('key', action='save', value='some value')
+        yield dbp.doAction('key', action='save', value='some value')
         value = yield store.get('foo', 'key')
         self.assertEqual(value, 'some value', "Should save in store")
 
@@ -289,11 +289,10 @@ class StorebackedAnswererTest(TestCase):
         dbp = StorebackedAnswerer(store, self.human({}))
         dbp.login = u'\N{SNOWMAN}login'
 
-        result = yield dbp.doAction(u'\N{SNOWMAN}key',
-                                    action='save',
-                                    value=u'\N{SNOWMAN}value')
+        yield dbp.doAction(u'\N{SNOWMAN}key',
+                           action='save',
+                           value=u'\N{SNOWMAN}value')
         value = yield store.get(u'\N{SNOWMAN}login'.encode('utf-8'),
                                 u'\N{SNOWMAN}key'.encode('utf-8'))
         self.assertEqual(value, u'\N{SNOWMAN}value'.encode('utf-8'),
                          "Should save in store as encoded utf-8")
-
