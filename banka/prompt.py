@@ -8,6 +8,7 @@ information.
 @var save: A function for saving over the channel 3 medium.
 """
 
+import sys
 import os
 import json
 
@@ -30,7 +31,8 @@ class _Prompter(object):
     """
     """
 
-    def __init__(self, writer=writeTo3, reader=readFromStdin):
+    def __init__(self, writer=writeTo3, reader=readFromStdin,
+                 logstream=sys.stderr):
         """
         @param writer: A function that accepts a prompt dictionary and is
             responsible for transmitting a corresponding request to whoever
@@ -38,9 +40,13 @@ class _Prompter(object):
 
         @param reader: A function of no arguments that is called immediately
             after writing a prompt if an answer is expected.
+
+        @param logstream: The file-like object to which logging information
+            should be written.
         """
         self.writer = writer
         self.reader = reader
+        self.logstream = logstream
 
     def prompt(self, key, ask_human=True):
         """
@@ -71,6 +77,10 @@ class _Prompter(object):
             'action': 'save',
             'value': value,
         })
+
+    def log(self, msg, system):
+        """
+        """
 
 
 _prompter = _Prompter()

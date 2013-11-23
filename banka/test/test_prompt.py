@@ -1,7 +1,10 @@
 # Copyright (c) The SimpleFIN Team
 # See LICENSE for details.
 
+import sys
+
 from unittest import TestCase
+from StringIO import StringIO
 from mock import MagicMock
 
 from banka.prompt import _Prompter, writeTo3, readFromStdin
@@ -16,6 +19,7 @@ class PrompterTest(TestCase):
         p = _Prompter()
         self.assertEqual(p.reader, readFromStdin)
         self.assertEqual(p.writer, writeTo3)
+        self.assertEqual(p.logstream, sys.stderr)
 
     def test_simple(self):
         """
@@ -58,3 +62,15 @@ class PrompterTest(TestCase):
         self.assertEqual(reader.call_count, 0, "Should not have asked for "
                          "an answer back")
         self.assertEqual(r, None, "Should get None back")
+
+    def test_log(self):
+        """
+        You can log things to the logstream.
+        """
+        logstream = StringIO()
+        p = _Prompter(None, None, logstream)
+        p.log('foo')
+        self.assertEqual(logstream.getvalue(), 'foo\n')
+
+        p.log('foo', system='something')
+        self.assertEqual(logstream.getvalue(), '[something] foo bar\n')
