@@ -67,7 +67,8 @@ class RunOptions(usage.Options):
 
         # XXX put this elsewhere
         def asker(x):
-            return getpass.getpass(x).encode('utf-8')
+            value = getpass.getpass(x)
+            return value
         answerer = StorebackedAnswerer(enc_store, asker)
         ch3_receiver = partial(answererReceiver, answerer.doAction)
         r = yield self._run(reactor, args, ch3_receiver)

@@ -4,6 +4,7 @@ from StringIO import StringIO
 import json
 from twisted.internet.protocol import ProcessProtocol
 from twisted.internet import defer
+from twisted.python import log
 
 
 class Wrap3Protocol(ProcessProtocol):
@@ -74,9 +75,14 @@ def answererReceiver(getdata_fn, proto, line):
     d = defer.maybeDeferred(getdata_fn, **kwargs)
 
     def _gotAnswer(answer, proto):
-        print 'writing answer: %r' % (answer,)
         proto.transport.write(json.dumps(answer) + '\n')
     return d.addCallback(_gotAnswer, proto)
+
+
+def _encode(str):
+    if type(str) == unicode:
+        return str.encode('utf-8')
+    return str
 
 
 class StorebackedAnswerer(object):
@@ -100,7 +106,6 @@ class StorebackedAnswerer(object):
         """
         Handle a data request.
         """
-        print 'doAction(%r, %r)' % (args, kwargs)
         action = kwargs.pop('action', 'prompt')
         method = getattr(self, 'do_' + action)
         return method(*args, **kwargs)
@@ -115,36 +120,30 @@ class StorebackedAnswerer(object):
             C{key} will be used instead.
         @param ask_human: If C{False} then don't ask the human for this data.
         """
-        # XXX untested
         prompt = prompt or key
-        key = key.encode('utf-8')
-        prompt = prompt.encode('utf-8')
+        key = _encode(key)
+        login = _encode(self.login)
 
         # handle special _login case
         if key == '_login':
             value = self.ask_human(prompt)
-            print 'login', repr(value)
             self.login = value
             defer.returnValue(value)
 
         value = None
         try:
-            print 'store.get(%r, %r)' % (self.login, key)
-            value = yield self.store.get(self.login, key)
-        except KeyError:
-            print 'not in store'
+            value = yield self.store.get(login, key)
+        except KeyError as e:
             if ask_human:
-                value = self.ask_human(prompt)
+                value = _encode(self.ask_human(prompt))
         if value is not None:
-            yield self.store.put(self.login, key, value)
+            yield self.store.put(login, key, value)
         defer.returnValue(value)
 
     def do_save(self, key, value):
         """
         Save some data in the store.
         """
-        # XXX untested
-        key = key.encode('utf-8')
-        value = value.encode('utf-8')
-        print 'saving to store', key, value
-        return self.store.put(self.login, key, value)
+        key = _encode(key)
+        value = _encode(value)
+        return self.store.put(_encode(self.login), key, value)

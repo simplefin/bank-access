@@ -34,8 +34,7 @@ class StdinProtocol(ProcessProtocol):
         self.done = defer.Deferred()
 
     def outReceived(self, data):
-        log.msg(repr(data), system='stdout.repr')
-        log.msg(data, system='stdout')
+        log.msg(repr(data), system='stdout')
         self.stdout.write(data)
         if self.responses and data.strip():
             r = self.responses.pop(0)
@@ -45,7 +44,7 @@ class StdinProtocol(ProcessProtocol):
                 self.transport.closeStdin()
 
     def errReceived(self, data):
-        log.msg(data, system='stderr')
+        log.msg(repr(data), system='stderr')
         self.stderr.write(data)
 
     def processEnded(self, status):

@@ -29,7 +29,6 @@ class SQLDataStore(object):
         @param value: value
         @type value: str
         """
-        print 'data store saving to store', id, key ,value
         return self.pool.runOperation('replace into data (id, key, value) '
                                       'values (?,?,?)',
                                       (buffer(id), buffer(key), buffer(value)))

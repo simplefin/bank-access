@@ -184,6 +184,21 @@ class StorebackedAnswererTest(TestCase):
         self.assertEqual(result, '123')
 
     @defer.inlineCallbacks
+    def test_doAction_prompt_unicode(self):
+        """
+        Unicode should be converted to strings.
+        """
+        store = yield self.getStore()
+        dbp = StorebackedAnswerer(store, self.human({
+            u'\N{SNOWMAN}prompt': u'\N{SNOWMAN}value'
+        }))
+        dbp.login = u'\N{SNOWMAN}login'
+        yield dbp.doAction(u'\N{SNOWMAN}key', prompt=u'\N{SNOWMAN}prompt')
+        result = yield store.get(u'\N{SNOWMAN}login'.encode('utf-8'),
+                                 u'\N{SNOWMAN}key'.encode('utf-8'))
+        self.assertEqual(result, u'\N{SNOWMAN}value'.encode('utf-8'))
+
+    @defer.inlineCallbacks
     def test_doAction_fromHuman(self):
         """
         By default, the human is asked for every piece of data.  The data is
@@ -264,3 +279,21 @@ class StorebackedAnswererTest(TestCase):
         result = yield dbp.doAction('key', action='save', value='some value')
         value = yield store.get('foo', 'key')
         self.assertEqual(value, 'some value', "Should save in store")
+
+    @defer.inlineCallbacks
+    def test_doAction_save_unicode(self):
+        """
+        Everything should be turned into bytes.
+        """
+        store = yield self.getStore()
+        dbp = StorebackedAnswerer(store, self.human({}))
+        dbp.login = u'\N{SNOWMAN}login'
+
+        result = yield dbp.doAction(u'\N{SNOWMAN}key',
+                                    action='save',
+                                    value=u'\N{SNOWMAN}value')
+        value = yield store.get(u'\N{SNOWMAN}login'.encode('utf-8'),
+                                u'\N{SNOWMAN}key'.encode('utf-8'))
+        self.assertEqual(value, u'\N{SNOWMAN}value'.encode('utf-8'),
+                         "Should save in store as encoded utf-8")
+

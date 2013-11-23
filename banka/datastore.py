@@ -7,6 +7,8 @@ import scrypt
 
 class _HashingCryptingStore(object):
 
+    _sem = None
+
     def _hash(self, data):
         raise NotImplemented
 
@@ -16,41 +18,52 @@ class _HashingCryptingStore(object):
     def _decrypt(self, ciphertext):
         raise NotImplemented
 
-    def _expand(self, args, func):
-        print func, args
+    def _semaphore(self):
+        if not self._sem:
+            self._sem = defer.DeferredSemaphore(1)
+        return self._sem
+
+    def _lockRunDeferredArgs(self, func, *argd):
+        dlist = defer.gatherResults(argd)
+        sem = self._semaphore()
+        return sem.run(self._reallyRun, func, dlist)
+
+    def _reallyRun(self, func, arg_dlist):
+        return arg_dlist.addCallback(self._reallyRunForReal, func)
+
+    def _reallyRunForReal(self, args, func):
         return func(*args)
 
     def put(self, id, key, value):
-        print 'put?', id, key, value
         hashed_id = self._hash(id)
         hashed_key = self._hash(key)
         encrypted_value = self._encrypt(value)
 
-        print 'just before put'
-        dlist = defer.gatherResults([hashed_id, hashed_key, encrypted_value])
-
-        dlist.addCallback(self._expand, self.store.put)
-        def eb(errs):
-            print 'ERROR', errs
-        dlist.addErrback(eb)
-        return dlist
+        return self._lockRunDeferredArgs(
+            self.store.put,
+            hashed_id,
+            hashed_key,
+            encrypted_value)
 
     def get(self, id, key):
         hashed_id = self._hash(id)
         hashed_key = self._hash(key)
-        dlist = defer.gatherResults([hashed_id, hashed_key])
-        dlist.addCallback(self._expand, self.store.get)
-        dlist.addCallback(self._decrypt)
-        return dlist
+        
+        d = self._lockRunDeferredArgs(self.store.get, hashed_id, hashed_key)
+        d.addCallback(self._decrypt)
+        return d
 
     def delete(self, id, key=None):
         hashed_id = self._hash(id)
         hashed_key = defer.succeed(None)
         if key is not None:
             hashed_key = self._hash(key)
-        dlist = defer.gatherResults([hashed_id, hashed_key])
-        dlist.addCallback(self._expand, self.store.delete)
-        return dlist
+
+        return self._lockRunDeferredArgs(
+            self.store.delete,
+            hashed_id,
+            hashed_key
+        )
 
 
 class KeyczarStore(_HashingCryptingStore):

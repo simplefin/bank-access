@@ -104,6 +104,23 @@ class DataStoreTestMixin(object):
         self.assertFailure(store.get('id', 'foo'), KeyError)
         self.assertFailure(store.get('id', 'bar'), KeyError)
 
+    @defer.inlineCallbacks
+    def test_race(self):
+        """
+        A get immediately after a put should wait until the put is done.
+        """
+        store = yield self.getEmptyStore()
+
+        # lack of yield is intentional
+        put_d = store.put('id', 'foo', 'bar')
+        get_d = store.get('id', 'foo')
+        del_d = store.delete('id')
+
+        yield put_d
+        result = yield get_d
+        yield del_d
+        self.assertEqual(result, 'bar')
+
 
 class KeyczarStoreFunctionalTest(TestCase, DataStoreTestMixin):
 
