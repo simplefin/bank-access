@@ -58,7 +58,10 @@ If your bank is listed, then get your transaction data like this:
     banka run <BANK DOMAIN>/list-accounts
 
 which will prompt you for your credentials and write a JSON string to stdout.
+For more options,
+run with `--help`:
 
+    banka run --help
 
 
 ## If your bank isn't listed ##
@@ -182,6 +185,10 @@ you may need to do this instead:
 
     PYTHONPATH=. bin/banka run <BANK DOMAIN>/list-accounts
 
+You may also find it helpful to store sensitive data to a local, encrypted
+database during development.  See the `--store` option for more information:
+
+    banka run --help
 
 
 ## Asking for credentials ##
