@@ -56,10 +56,97 @@ def wrap3Prompt(getpass_fn, proto, line):
     @param line: Line of data containing some JSON.
     """
     data = json.loads(line)
-    prompt = '%s? ' % (data['key'],)
-    d = defer.maybeDeferred(getpass_fn, prompt)
+    action = data.get('action', 'prompt')
+    if action not in ['save']:
+        prompt = '%s? ' % (data['key'],)
+        d = defer.maybeDeferred(getpass_fn, prompt)
+
+        def _gotAnswer(answer, proto):
+            proto.transport.write(json.dumps(answer) + '\n')
+
+        d.addCallback(_gotAnswer, proto)
+
+
+def answererReceiver(getdata_fn, proto, line):
+    """
+    I translate C{line} into keyword arguments for C{getdata_fn} then write
+    the response as JSON to C{proto}'s transport.
+    """
+    kwargs = json.loads(line)
+    d = defer.maybeDeferred(getdata_fn, **kwargs)
+    action = kwargs.get('action', 'prompt')
 
     def _gotAnswer(answer, proto):
-        proto.transport.write(json.dumps(answer) + '\n')
+        if action not in ['save']:
+            proto.transport.write(json.dumps(answer) + '\n')
+    return d.addCallback(_gotAnswer, proto)
 
-    d.addCallback(_gotAnswer, proto)
+
+def _encode(str):
+    if type(str) == unicode:
+        return str.encode('utf-8')
+    return str
+
+
+class StorebackedAnswerer(object):
+    """
+    My L{doAction} function can be used as a C{ch3_receiver} in
+    L{Wrap3Protocol} if it's wrapped in L{answererReceiver).
+
+    I get my answers to the prompts either from a
+    data store or else a human (if possible).
+
+    @ivar login: The login string to be used when asked for C{'_login'}
+    """
+
+    login = None
+
+    def __init__(self, store, ask_human):
+        self.store = store
+        self.ask_human = ask_human
+
+    def doAction(self, *args, **kwargs):
+        """
+        Handle a data request.
+        """
+        action = kwargs.pop('action', 'prompt')
+        method = getattr(self, 'do_' + action)
+        return method(*args, **kwargs)
+
+    @defer.inlineCallbacks
+    def do_prompt(self, key, prompt=None, ask_human=True):
+        """
+        Get a piece of data either from the store or from a human.
+
+        @param key: name of data to get.
+        @param prompt: String prompt to give to the human.  If not given,
+            C{key} will be used instead.
+        @param ask_human: If C{False} then don't ask the human for this data.
+        """
+        prompt = prompt or key
+        key = _encode(key)
+        login = _encode(self.login)
+
+        # handle special _login case
+        if key == '_login':
+            value = self.ask_human(prompt)
+            self.login = value
+            defer.returnValue(value)
+
+        value = None
+        try:
+            value = yield self.store.get(login, key)
+        except KeyError:
+            if ask_human:
+                value = _encode(self.ask_human(prompt))
+        if value is not None:
+            yield self.store.put(login, key, value)
+        defer.returnValue(value)
+
+    def do_save(self, key, value):
+        """
+        Save some data in the store.
+        """
+        key = _encode(key)
+        value = _encode(value)
+        return self.store.put(_encode(self.login), key, value)

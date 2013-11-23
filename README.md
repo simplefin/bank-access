@@ -58,7 +58,10 @@ If your bank is listed, then get your transaction data like this:
     banka run <BANK DOMAIN>/list-accounts
 
 which will prompt you for your credentials and write a JSON string to stdout.
+For more options,
+run with `--help`:
 
+    banka run --help
 
 
 ## If your bank isn't listed ##
@@ -182,6 +185,10 @@ you may need to do this instead:
 
     PYTHONPATH=. bin/banka run <BANK DOMAIN>/list-accounts
 
+You may also find it helpful to store sensitive data to a local, encrypted
+database during development.  See the `--store` option for more information:
+
+    banka run --help
 
 
 ## Asking for credentials ##
@@ -195,6 +202,21 @@ prompt for credentials using `banka.prompt.prompt` like this:
 
 **All scripts must** prompt for the specially named `_login` credential
 **first.**
- 
+
+
+## Saving state between runs ##
+
+Your script may need to save state between each run (for instance, cookies
+gathered during screen scraping).  Your script may ask for saved state using
+`banka.prompt.prompt` as in [Asking for credentials](#asking-for-credentials):
+
+    from banka.prompt import prompt
+    state = prompt('_state', ask_human=False)
+
+The script requests the parent to save the state with `banka.prompt.save`
+like this:
+
+    from banka.prompt import save
+    save('_state', "some string of data that should be saved")
 
 
