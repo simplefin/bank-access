@@ -1,15 +1,19 @@
 # Copyright (c) The SimpleFIN Team
 # See LICENSE for details.
 
+import os
+
 from twisted.trial.unittest import TestCase
 from twisted.internet import defer, error
 from twisted.python.failure import Failure
 
 from StringIO import StringIO
 
-from mock import MagicMock
+from mock import MagicMock, create_autospec
+
+from banka.inst import directory
 from banka.wrap3 import Wrap3Protocol, wrap3Prompt, StorebackedAnswerer
-from banka.wrap3 import answererReceiver
+from banka.wrap3 import answererReceiver, HumanbackedAnswerer, Runner
 
 
 class Wrap3ProtocolTest(TestCase):
@@ -322,3 +326,118 @@ class StorebackedAnswererTest(TestCase):
                                 u'\N{SNOWMAN}key'.encode('utf-8'))
         self.assertEqual(value, u'\N{SNOWMAN}value'.encode('utf-8'),
                          "Should save in store as encoded utf-8")
+
+
+class HumanbackedAnswererTest(TestCase):
+
+    def human(self, answers):
+        def f(prompt_str):
+            return answers[prompt_str]
+        return f
+
+    @defer.inlineCallbacks
+    def test_doAction_prompt(self):
+        """
+        A prompt will be sent to the ask_human function.
+        """
+        hba = HumanbackedAnswerer(self.human({'_login': 'foo'}))
+        result = yield hba.doAction('_login')
+        self.assertEqual(result, 'foo')
+
+    @defer.inlineCallbacks
+    def test_doAction_alternatePrompt(self):
+        """
+        If the C{'prompt'} keyword is given, use that for the prompt.
+        """
+        hba = HumanbackedAnswerer(self.human({'Username': 'foo'}))
+        result = yield hba.doAction('_login', prompt='Username')
+        self.assertEqual(result, 'foo')
+
+    @defer.inlineCallbacks
+    def test_doAction_unicode(self):
+        """
+        Results should be bytes, not unicode.
+        """
+        hba = HumanbackedAnswerer(self.human({'_login': u'\N{SNOWMAN}'}))
+        result = yield hba.doAction('_login')
+        self.assertEqual(result, u'\N{SNOWMAN}'.encode('utf-8'))
+        self.assertEqual(type(result), str)
+
+    @defer.inlineCallbacks
+    def test_doAction_dontAskHuman(self):
+        """
+        If the human ought not be asked, then return None.
+        """
+        hba = HumanbackedAnswerer(self.human({'_login': 'foo'}))
+        result = yield hba.doAction('_login', ask_human=False)
+        self.assertEqual(result, None, "No human should have been asked")
+
+    @defer.inlineCallbacks
+    def test_doAction_save(self):
+        """
+        The save action is ignored and given a None response.
+        """
+        hba = HumanbackedAnswerer(self.human({}))
+        result = yield hba.doAction('key', action='save', value='bar')
+        self.assertEqual(result, None)
+
+
+class RunnerTest(TestCase):
+
+    timeout = 2
+
+    def test_run(self):
+        """
+        Calling run should:
+
+        1. Look up the full path of the script
+        2. Create a protocol
+        3. Spawn a process
+        4. Return a deferred that callsback when the process is done.
+        """
+        reactor = MagicMock()
+        answerer = MagicMock()
+        proto = MagicMock()
+
+        r = Runner(answerer)
+        r.stdout = 'stdout'
+        r.stderr = 'stderr'
+        r.protocolFactory = create_autospec(r.protocolFactory,
+                                            return_value=proto)
+        r.ch3Maker = create_autospec(r.ch3Maker, return_value='ch3_receiver')
+        r.scriptPath = create_autospec(r.scriptPath, return_value='abs/path')
+
+        self.assertEqual(r.answerer, answerer)
+
+        r.run(reactor, ['arg1', 'arg2', 'arg3'])
+        r.ch3Maker.assert_called_once_with(answerer.doAction)
+        r.scriptPath.assert_called_once_with('arg1')
+        r.protocolFactory.assert_called_once_with('ch3_receiver',
+                                                  stdout='stdout',
+                                                  stderr='stderr')
+        reactor.spawnProcess.assert_called_once_with(
+            proto,
+            'abs/path',
+            args=['abs/path', 'arg2', 'arg3'],
+            env=None,
+            childFDs={0: 'w', 1: 'r', 2: 'r', 3: 'r'},
+        )
+
+    def test_scriptPath(self):
+        """
+        L{scriptPath} should return the given arg joined with the inst/
+        abs path.
+        """
+        r = Runner(None)
+        self.assertEqual(r.scriptPath('foo'),
+                         os.path.join(directory.fp.path, 'foo'))
+
+    def test_scriptPath_absPath(self):
+        """
+        If C{look_in_inst_package} is C{False},
+        then scriptPath becomes an identity
+        function.
+        """
+        r = Runner(None)
+        r.look_in_inst_package = False
+        self.assertEqual(r.scriptPath('foo'), 'foo')

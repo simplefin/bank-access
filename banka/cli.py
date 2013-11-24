@@ -12,7 +12,7 @@ from twisted.python import usage
 
 from banka.inst import directory
 from banka.wrap3 import Wrap3Protocol, wrap3Prompt, answererReceiver
-from banka.wrap3 import StorebackedAnswerer
+from banka.wrap3 import StorebackedAnswerer, HumanbackedAnswerer, Runner
 from banka.datastore import PasswordStore
 
 

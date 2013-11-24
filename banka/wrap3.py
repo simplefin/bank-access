@@ -1,9 +1,17 @@
 # Copyright (c) The SimpleFIN Team
 # See LICENSE for details.
 from StringIO import StringIO
+
+import sys
+import os
 import json
+
+from functools import partial
+
 from twisted.internet.protocol import ProcessProtocol
 from twisted.internet import defer
+
+from banka.inst import directory
 
 
 class Wrap3Protocol(ProcessProtocol):
@@ -49,6 +57,8 @@ class Wrap3Protocol(ProcessProtocol):
 
 def wrap3Prompt(getpass_fn, proto, line):
     """
+    DEPRECATED.  Use L{HumanbackedAnswerer} and L{answererReceiver} instead.
+
     @param getpass_fn: A function that will be called with a string prompt and
         is expected to return a string answer.
     @param proto: A L{ProcessProtocol} instance whose stdin will receive the
@@ -86,6 +96,39 @@ def _encode(str):
     if type(str) == unicode:
         return str.encode('utf-8')
     return str
+
+
+class HumanbackedAnswerer(object):
+    """
+    I get all answers from a human.
+    """
+
+    def __init__(self, ask_human):
+        self.ask_human = ask_human
+
+    def doAction(self, *args, **kwargs):
+        """
+        Handle a data request.
+        """
+        action = kwargs.pop('action', 'prompt')
+        method = getattr(self, 'do_' + action)
+        return method(*args, **kwargs)
+
+    def do_prompt(self, key, prompt=None, ask_human=True):
+        """
+        Prompt the human for some bit of information.
+        """
+        prompt = prompt or key
+        if not ask_human:
+            return None
+        return _encode(self.ask_human(prompt))
+
+    def do_save(self, *args, **kwargs):
+        """
+        Ignore save requests (since we're not going to expect humans to write
+        down long bytestrings).
+        """
+        return None
 
 
 class StorebackedAnswerer(object):
@@ -150,3 +193,56 @@ class StorebackedAnswerer(object):
         key = _encode(key)
         value = _encode(value)
         return self.store.put(_encode(self.login), key, value)
+
+
+class Runner(object):
+    """
+    XXX
+    """
+
+    look_in_inst_package = True
+    protocolFactory = Wrap3Protocol
+
+    def __init__(self, answerer):
+        self.answerer = answerer
+
+    def ch3Maker(self, doAction_fn):
+        """
+        XXX
+        """
+        # XXX this is only tested functionally
+        return partial(answererReceiver, doAction_fn)
+
+    def scriptPath(self, arg0):
+        """
+        XXX
+        """
+        if self.look_in_inst_package:
+            return os.path.join(directory.fp.path, arg0)
+        else:
+            return arg0
+
+    def run(self, reactor, args):
+        ch3_receiver = self.ch3Maker(self.answerer.doAction)
+        path = self.scriptPath(args[0])
+        proto = self.protocolFactory(ch3_receiver, stdout=self.stdout,
+                                     stderr=self.stderr)
+        reactor.spawnProcess(
+            proto,
+            path,
+            args=[path]+args[1:],
+            env=None,
+            childFDs={
+                0: 'w',
+                1: 'r',
+                2: 'r',
+                3: 'r',
+            })
+
+        # XXX Below is functionally test only.
+        def cb(status):
+            return
+
+        def eb(status):
+            sys.exit(status.value.exitCode)
+        return proto.done.addCallbacks(cb, eb)
