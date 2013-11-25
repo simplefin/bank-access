@@ -201,9 +201,15 @@ class Runner(object):
     """
 
     look_in_inst_package = True
+    stdout = sys.stdout
+    stderr = sys.stderr
     protocolFactory = Wrap3Protocol
 
     def __init__(self, answerer):
+        """
+        @param answerer: An object with a L{doAction} method like that of
+            L{HumanbackedAnswerer} and L{StorebackedAnswerer}.
+        """
         self.answerer = answerer
 
     def ch3Maker(self, doAction_fn):
@@ -230,7 +236,7 @@ class Runner(object):
         reactor.spawnProcess(
             proto,
             path,
-            args=[path]+args[1:],
+            args=[path]+list(args[1:]),
             env=None,
             childFDs={
                 0: 'w',
@@ -238,11 +244,4 @@ class Runner(object):
                 2: 'r',
                 3: 'r',
             })
-
-        # XXX Below is functionally test only.
-        def cb(status):
-            return
-
-        def eb(status):
-            sys.exit(status.value.exitCode)
-        return proto.done.addCallbacks(cb, eb)
+        return proto.done

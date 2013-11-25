@@ -1,6 +1,7 @@
 # Copyright (c) The SimpleFIN Team
 # See LICENSE for details.
 
+import sys
 import os
 
 from twisted.trial.unittest import TestCase
@@ -386,6 +387,14 @@ class RunnerTest(TestCase):
 
     timeout = 2
 
+    def test_defaults(self):
+        """
+        Should have default stdout, stderr
+        """
+        r = Runner(None)
+        self.assertEqual(r.stdout, sys.stdout)
+        self.assertEqual(r.stderr, sys.stderr)
+
     def test_run(self):
         """
         Calling run should:
@@ -409,7 +418,7 @@ class RunnerTest(TestCase):
 
         self.assertEqual(r.answerer, answerer)
 
-        r.run(reactor, ['arg1', 'arg2', 'arg3'])
+        r.run(reactor, ('arg1', 'arg2', 'arg3'))
         r.ch3Maker.assert_called_once_with(answerer.doAction)
         r.scriptPath.assert_called_once_with('arg1')
         r.protocolFactory.assert_called_once_with('ch3_receiver',
