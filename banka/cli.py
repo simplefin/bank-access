@@ -1,18 +1,15 @@
 # Copyright (c) The SimpleFIN Team
 # See LICENSE for details.
 import sys
-import os
 import getpass
 import json
 import yaml
-from functools import partial
 
 from twisted.internet import defer
 from twisted.python import usage
 
 from banka.inst import directory
-from banka.wrap3 import Wrap3Protocol, wrap3Prompt, answererReceiver
-from banka.wrap3 import StorebackedAnswerer
+from banka.wrap3 import StorebackedAnswerer, HumanbackedAnswerer, Runner
 from banka.datastore import PasswordStore
 
 
@@ -49,14 +46,37 @@ class RunOptions(usage.Options):
         from twisted.internet.task import react
         return react(self._doCommand, [self['args']])
 
+    @defer.inlineCallbacks
     def _doCommand(self, reactor, args):
-        if self['store']:
-            return self._runWithStore(reactor, args)
-        else:
-            return self._runWithoutStore(reactor, args)
+        answerer = yield self._getAnswerer()
+        runner = Runner(answerer)
+
+        def cb(status):
+            return
+
+        def eb(status):
+            sys.exit(status.value.exitCode)
+
+        d = runner.run(reactor, args)
+        d.addCallbacks(cb, eb)
+        yield d
 
     @defer.inlineCallbacks
-    def _runWithStore(self, reactor, args):
+    def _getAnswerer(self):
+        # XXX put this elsewhere
+        def asker(x):
+            return getpass.getpass(x + '? ')
+
+        answerer = None
+        if self['store']:
+            store = yield self._getStore()
+            answerer = StorebackedAnswerer(store, asker)
+        else:
+            answerer = HumanbackedAnswerer(asker)
+        defer.returnValue(answerer)
+
+    @defer.inlineCallbacks
+    def _getStore(self):
         from norm import makePool
         from banka.sql import sqlite_patcher, SQLDataStore
         password = getpass.getpass('Data encryption password? ')
@@ -64,42 +84,7 @@ class RunOptions(usage.Options):
         yield sqlite_patcher.upgrade(pool)
         store = SQLDataStore(pool)
         enc_store = PasswordStore(store, password)
-
-        # XXX put this elsewhere
-        def asker(x):
-            value = getpass.getpass(x)
-            return value
-        answerer = StorebackedAnswerer(enc_store, asker)
-        ch3_receiver = partial(answererReceiver, answerer.doAction)
-        r = yield self._run(reactor, args, ch3_receiver)
-        defer.returnValue(r)
-
-    def _runWithoutStore(self, reactor, args):
-        ch3_receiver = partial(wrap3Prompt, getpass.getpass)
-        return self._run(reactor, args, ch3_receiver)
-
-    def _run(self, reactor, args, ch3_receiver):
-        script = args[0]
-        rest = args[1:]
-        if not self['non-package']:
-            # relative to banka/inst
-            script = os.path.join(directory.fp.path, script)
-        args = [script] + list(rest)
-        proto = Wrap3Protocol(ch3_receiver,
-                              stdout=sys.stdout, stderr=sys.stderr)
-        reactor.spawnProcess(proto, args[0], args=args, env=None, childFDs={
-            0: 'w',
-            1: 'r',
-            2: 'r',
-            3: 'r',
-        })
-
-        def cb(status):
-            return
-
-        def eb(status):
-            sys.exit(status.value.exitCode)
-        return proto.done.addCallbacks(cb, eb)
+        defer.returnValue(enc_store)
 
 
 #------------------------------------------------------------------------------
