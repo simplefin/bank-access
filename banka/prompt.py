@@ -8,6 +8,8 @@ information.
 @var save: A function for saving over the channel 3 medium.
 """
 
+__all__ = ['save', 'prompt', 'alias']
+
 import os
 import json
 
@@ -73,6 +75,36 @@ class ParentInfoSource(object):
             'value': value,
         })
 
+    def alias(self, account_id):
+        """
+        Get a secure alias for an account id.
+
+        Note that this will not be consistent if there is no store
+        storing the aliases.
+
+        @param account_id: Account ID as from the bank.
+        @type account_id: C{str}
+
+        @return: an alias
+        @rtype: C{str}
+        """
+        self.writer({
+            'action': 'alias',
+            'account_id': account_id,
+        })
+        return self.reader()
+
 _prompter = ParentInfoSource()
 prompt = _prompter.prompt
 save = _prompter.save
+alias = _prompter.alias
+
+
+def replaceInsecureIDs(alias_fn, data):
+    """
+    Remove all C{_insecure_id} instances and replace with aliased C{id}s.
+    """
+    # XXX not worrying about editing in place for now.
+    for account in data['accounts']:
+        account['id'] = alias_fn(account.pop('_insecure_id'))
+    return data

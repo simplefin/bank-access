@@ -121,6 +121,22 @@ class answerProtocolTest(TestCase):
         self.assertEqual(proto.transport.write.call_count, 0, "Should not "
                          "write anything back on save")
 
+    def test_alias(self):
+        """
+        Should call alias function and write to transport the answer.
+        """
+        proto = MagicMock()
+
+        info_source = MagicMock()
+        info_source.alias.return_value = defer.succeed('foo')
+
+        answerProtocol(info_source, proto, json.dumps({
+            'action': 'alias',
+            'account_id': 'foo'
+        }))
+        info_source.alias.assert_called_once_with(account_id='foo')
+        proto.transport.write.assert_called_once_with('"foo"\n')
+
     def test_unknown(self):
         """
         Only commands that are part of the L{IInfoSource} interface can be
@@ -308,6 +324,51 @@ class StorebackedAnswererTest(TestCase):
         self.assertEqual(value, u'\N{SNOWMAN}value'.encode('utf-8'),
                          "Should save in store as encoded utf-8")
 
+    @defer.inlineCallbacks
+    def test_alias(self):
+        """
+        Should return the same alias for the same account id (because it's
+        stored in the store)
+        """
+        store = yield self.getStore()
+        dbp = StorebackedAnswerer(store, self.human({}))
+        dbp.login = 'foo'
+
+        alias1 = yield dbp.alias('account 1')
+        alias2 = yield dbp.alias('account 1')
+        self.assertEqual(alias1, alias2, "Should return the same alias for "
+                         "the same account.")
+
+    @defer.inlineCallbacks
+    def test_alias_differentAccount(self):
+        """
+        Should return a different alias for different accounts.
+        """
+        store = yield self.getStore()
+        dbp = StorebackedAnswerer(store, self.human({}))
+        dbp.login = 'foo'
+
+        alias1 = yield dbp.alias('account 1')
+        alias2 = yield dbp.alias('account 2')
+        self.assertNotEqual(alias1, alias2)
+
+    @defer.inlineCallbacks
+    def test_alias_differentLogin(self):
+        """
+        I'm torn, but I think the same account id for different logins should
+        return the same alias.
+        """
+        store = yield self.getStore()
+        d1 = StorebackedAnswerer(store, self.human({}))
+        d1.login = 'foo'
+        d2 = StorebackedAnswerer(store, self.human({}))
+        d2.login = 'bar'
+
+        alias2 = yield d1.alias('account 1')
+        alias1 = yield d2.alias('account 1')
+        self.assertEqual(alias1, alias2, "Account id alias should be the "
+                         "same regardless of login")
+
 
 class HumanbackedAnswererTest(TestCase):
 
@@ -365,6 +426,18 @@ class HumanbackedAnswererTest(TestCase):
         hba = HumanbackedAnswerer(self.human({}))
         result = yield hba.save('key', 'bar')
         self.assertEqual(result, None)
+
+    @defer.inlineCallbacks
+    def test_alias(self):
+        """
+        A human will not be asked to generate an alias at this point.  Instead,
+        return a uuid.
+        """
+        hba = HumanbackedAnswerer(self.human({}))
+        r1 = yield hba.alias('some account')
+        r2 = yield hba.alias('some account')
+        self.assertNotEqual(r1, r2, "Should return different alias for the "
+                            "same account id")
 
 
 class RunnerTest(TestCase):

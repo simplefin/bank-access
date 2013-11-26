@@ -153,7 +153,7 @@ stdout and exit with exit code `0`.  Here's an example:
             "domain": "mybank.com"
             "sfin-url": null
           },
-          "_insecure_id": "9982739",
+          "id": "abcdef1234abc",
           "name": "Savings",
           "currency": "USD",
           "balance": "100.23",
@@ -220,3 +220,11 @@ like this:
     save('_state', "some string of data that should be saved")
 
 
+## Asking for account `id` ##
+
+To fulfill [SimpleFIN's account id](http://simplefin.org/protocol.html#account.id)
+requirement, ask for an alias instead of using the bank-provided id, like this:
+
+    from banka.prompt import alias
+    account1_alias = alias('account 1')
+    account2_alias = alias('account 2')

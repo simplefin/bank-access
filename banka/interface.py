@@ -40,3 +40,14 @@ class IInfoSource(Interface):
 
         @return: C{None}
         """
+
+    def alias(account_id):
+        """
+        Get the alias for an account id.
+
+        @param account_id: Account id given by the bank.
+        @type account_id: C{str}
+
+        @return: An alias
+        @rtype: C{str}
+        """
