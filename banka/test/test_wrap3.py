@@ -3,6 +3,7 @@
 
 import sys
 import os
+import json
 
 from twisted.trial.unittest import TestCase
 from twisted.internet import defer, error
@@ -16,8 +17,8 @@ from mock import MagicMock, create_autospec
 
 from banka.interface import IInfoSource
 from banka.inst import directory
-from banka.wrap3 import Wrap3Protocol, wrap3Prompt, StorebackedAnswerer
-from banka.wrap3 import answererReceiver, HumanbackedAnswerer, Runner
+from banka.wrap3 import Wrap3Protocol, StorebackedAnswerer
+from banka.wrap3 import answerProtocol, HumanbackedAnswerer, Runner
 
 
 class Wrap3ProtocolTest(TestCase):
@@ -85,68 +86,20 @@ class Wrap3ProtocolTest(TestCase):
         self.assertEqual(self.failureResultOf(proto.done), err)
 
 
-class wrap3PromptTest(TestCase):
+class answerProtocolTest(TestCase):
 
-    def test_basic(self):
+    def test_prompt_default(self):
         """
-        wrap3Prompt
-        """
-        proto = MagicMock()
-        proto.transport = MagicMock()
-
-        prompts = []
-
-        def getpass(prompt):
-            prompts.append(prompt)
-            return 'hey'
-        wrap3Prompt(getpass, proto, '{"key":"name"}\n')
-
-        self.assertEqual(prompts, ['name? '], "Should call the prompt "
-                         "function with the key received")
-        proto.transport.write.assert_called_once_with('"hey"\n')
-
-    def test_deferred(self):
-        """
-        If the getpass function returns a Deferred, that should be handled.
-        """
-        proto = MagicMock()
-        proto.transport = MagicMock()
-
-        prompts = []
-
-        def getpass(prompt):
-            prompts.append(prompt)
-            return defer.succeed('hey')
-        wrap3Prompt(getpass, proto, '{"key":"name"}\n')
-        self.assertEqual(prompts, ['name? '])
-        proto.transport.write.assert_called_once_with('"hey"\n')
-
-    def test_save(self):
-        """
-        Saves should be ignored because there's nothing to save to.
-        """
-        proto = MagicMock()
-        getpass = MagicMock()
-        wrap3Prompt(getpass, proto, '{"key":"name","action":"save"}\n')
-        self.assertEqual(getpass.call_count, 0, "Should not prompt for "
-                         "save action")
-        self.assertEqual(proto.transport.write.call_count, 0, "Should not "
-                         "write anything back for save action")
-
-
-class answererReceiverTest(TestCase):
-
-    def test_basic(self):
-        """
-        Should call the first function with the JSON dictionary line as keyword
-        arguments then write the JSON response to the protocols transport.
+        Should call the C{prompt} method on the info source by default,
+        then write the response as JSON to the protocol's transport.
         """
         proto = MagicMock()
 
-        answerer = MagicMock(return_value=defer.succeed('foo'))
+        info_source = MagicMock()
+        info_source.prompt.return_value = defer.succeed('foo')
 
-        answererReceiver(answerer, proto, '{"key":"name"}\n')
-        answerer.assert_called_once_with(key='name')
+        answerProtocol(info_source, proto, '{"key":"name"}\n')
+        info_source.prompt.assert_called_once_with(key='name')
         proto.transport.write.assert_called_once_with('"foo"\n')
 
     def test_save(self):
@@ -156,12 +109,35 @@ class answererReceiverTest(TestCase):
         """
         proto = MagicMock()
 
-        answerer = MagicMock(return_value=defer.succeed('foo'))
+        info_source = MagicMock()
+        info_source.save.return_value = defer.succeed('foo')
 
-        answererReceiver(answerer, proto, '{"key":"name","action":"save"}\n')
-        answerer.assert_called_once_with(key='name', action='save')
+        answerProtocol(info_source, proto, json.dumps({
+            "key": "name",
+            "action": "save",
+            "value": "foo",
+        }))
+        info_source.save.assert_called_once_with(key='name', value='foo')
         self.assertEqual(proto.transport.write.call_count, 0, "Should not "
                          "write anything back on save")
+
+    def test_unknown(self):
+        """
+        Only commands that are part of the L{IInfoSource} interface can be
+        called.  If an unknown command is encountered, raise L{TypeError}.
+        """
+        proto = MagicMock()
+
+        info_source = MagicMock(return_value=defer.succeed('foo'))
+
+        self.assertRaises(TypeError, answerProtocol, info_source, proto,
+                          json.dumps({"action": "foo"}))
+        self.assertEqual(info_source.foo.call_count, 0,
+                         "Should not call foo")
+
+        # XXX is this wise?
+        self.assertEqual(proto.transport.write.call_count, 0, "Should not "
+                         "write anything back on the transport")
 
 
 class StorebackedAnswererTest(TestCase):
@@ -413,10 +389,10 @@ class RunnerTest(TestCase):
         4. Return a deferred that callsback when the process is done.
         """
         reactor = MagicMock()
-        answerer = MagicMock()
+        info_source = MagicMock()
         proto = MagicMock()
 
-        r = Runner(answerer)
+        r = Runner(info_source)
         r.stdout = 'stdout'
         r.stderr = 'stderr'
         r.protocolFactory = create_autospec(r.protocolFactory,
@@ -424,10 +400,10 @@ class RunnerTest(TestCase):
         r.ch3Maker = create_autospec(r.ch3Maker, return_value='ch3_receiver')
         r.scriptPath = create_autospec(r.scriptPath, return_value='abs/path')
 
-        self.assertEqual(r.answerer, answerer)
+        self.assertEqual(r.info_source, info_source)
 
         r.run(reactor, ('arg1', 'arg2', 'arg3'))
-        r.ch3Maker.assert_called_once_with(answerer.doAction)
+        r.ch3Maker.assert_called_once_with(info_source)
         r.scriptPath.assert_called_once_with('arg1')
         r.protocolFactory.assert_called_once_with('ch3_receiver',
                                                   stdout='stdout',
