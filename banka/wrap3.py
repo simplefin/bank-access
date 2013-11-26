@@ -11,6 +11,9 @@ from functools import partial
 from twisted.internet.protocol import ProcessProtocol
 from twisted.internet import defer
 
+from zope.interface import implements
+
+from banka.interface import IInfoSource
 from banka.inst import directory
 
 
@@ -55,36 +58,26 @@ class Wrap3Protocol(ProcessProtocol):
             self.done.errback(status)
 
 
-def wrap3Prompt(getpass_fn, proto, line):
+def answerProtocol(info_source, proto, line):
     """
-    DEPRECATED.  Use L{HumanbackedAnswerer} and L{answererReceiver} instead.
+    Using C{info_source} answer a question posed by C{proto}.
 
-    @param getpass_fn: A function that will be called with a string prompt and
-        is expected to return a string answer.
-    @param proto: A L{ProcessProtocol} instance whose stdin will receive the
-        answer to this prompt.
-    @param line: Line of data containing some JSON.
-    """
-    data = json.loads(line)
-    action = data.get('action', 'prompt')
-    if action not in ['save']:
-        prompt = '%s? ' % (data['key'],)
-        d = defer.maybeDeferred(getpass_fn, prompt)
+    @param info_source: A L{IInfoSource}-implementing thing.
+    @param proto: A L{ProcessProtocol} (probably L{Wrap3Protocol})
+    @param line: A line of data received by C{proto}.
 
-        def _gotAnswer(answer, proto):
-            proto.transport.write(json.dumps(answer) + '\n')
+    @raise TypeError: If C{line} contains a command that isn't acceptable.
 
-        d.addCallback(_gotAnswer, proto)
-
-
-def answererReceiver(getdata_fn, proto, line):
-    """
-    I translate C{line} into keyword arguments for C{getdata_fn} then write
-    the response as JSON to C{proto}'s transport.
+    @return: C{None}
     """
     kwargs = json.loads(line)
-    d = defer.maybeDeferred(getdata_fn, **kwargs)
-    action = kwargs.get('action', 'prompt')
+    action = kwargs.pop('action', 'prompt')
+
+    if not IInfoSource.get(action):
+        raise TypeError('%r not a valid action' % (action,))
+
+    function = getattr(info_source, action)
+    d = defer.maybeDeferred(function, **kwargs)
 
     def _gotAnswer(answer, proto):
         if action not in ['save']:
@@ -103,18 +96,12 @@ class HumanbackedAnswerer(object):
     I get all answers from a human.
     """
 
+    implements(IInfoSource)
+
     def __init__(self, ask_human):
         self.ask_human = ask_human
 
-    def doAction(self, *args, **kwargs):
-        """
-        Handle a data request.
-        """
-        action = kwargs.pop('action', 'prompt')
-        method = getattr(self, 'do_' + action)
-        return method(*args, **kwargs)
-
-    def do_prompt(self, key, prompt=None, ask_human=True):
+    def prompt(self, key, prompt=None, ask_human=True):
         """
         Prompt the human for some bit of information.
         """
@@ -123,7 +110,7 @@ class HumanbackedAnswerer(object):
             return None
         return _encode(self.ask_human(prompt))
 
-    def do_save(self, *args, **kwargs):
+    def save(self, *args, **kwargs):
         """
         Ignore save requests (since we're not going to expect humans to write
         down long bytestrings).
@@ -133,14 +120,13 @@ class HumanbackedAnswerer(object):
 
 class StorebackedAnswerer(object):
     """
-    My L{doAction} function can be used as a C{ch3_receiver} in
-    L{Wrap3Protocol} if it's wrapped in L{answererReceiver).
-
     I get my answers to the prompts either from a
     data store or else a human (if possible).
 
     @ivar login: The login string to be used when asked for C{'_login'}
     """
+
+    implements(IInfoSource)
 
     login = None
 
@@ -148,16 +134,8 @@ class StorebackedAnswerer(object):
         self.store = store
         self.ask_human = ask_human
 
-    def doAction(self, *args, **kwargs):
-        """
-        Handle a data request.
-        """
-        action = kwargs.pop('action', 'prompt')
-        method = getattr(self, 'do_' + action)
-        return method(*args, **kwargs)
-
     @defer.inlineCallbacks
-    def do_prompt(self, key, prompt=None, ask_human=True):
+    def prompt(self, key, prompt=None, ask_human=True):
         """
         Get a piece of data either from the store or from a human.
 
@@ -186,7 +164,7 @@ class StorebackedAnswerer(object):
             yield self.store.put(login, key, value)
         defer.returnValue(value)
 
-    def do_save(self, key, value):
+    def save(self, key, value):
         """
         Save some data in the store.
         """
@@ -205,19 +183,18 @@ class Runner(object):
     stderr = sys.stderr
     protocolFactory = Wrap3Protocol
 
-    def __init__(self, answerer):
+    def __init__(self, info_source):
         """
-        @param answerer: An object with a L{doAction} method like that of
-            L{HumanbackedAnswerer} and L{StorebackedAnswerer}.
+        @param info_source: An L{IInfoSource}-implementing object.
         """
-        self.answerer = answerer
+        self.info_source = info_source
 
-    def ch3Maker(self, doAction_fn):
+    def ch3Maker(self, info_source):
         """
         XXX
         """
         # XXX this is only tested functionally
-        return partial(answererReceiver, doAction_fn)
+        return partial(answerProtocol, info_source)
 
     def scriptPath(self, arg0):
         """
@@ -229,7 +206,7 @@ class Runner(object):
             return arg0
 
     def run(self, reactor, args):
-        ch3_receiver = self.ch3Maker(self.answerer.doAction)
+        ch3_receiver = self.ch3Maker(self.info_source)
         path = self.scriptPath(args[0])
         proto = self.protocolFactory(ch3_receiver, stdout=self.stdout,
                                      stderr=self.stderr)

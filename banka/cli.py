@@ -22,7 +22,7 @@ class RunOptions(usage.Options):
 
     optFlags = [
         ('non-package', 'N', "Run a script from the given path rather than "
-                             "relative to the banka/inst directory."),
+                             "one that comes with the banka package"),
     ]
 
     optParameters = [
@@ -141,8 +141,7 @@ class Options(usage.Options):
 
     subCommands = [
         ('list', None, ListOptions, "List institutions"),
-        ('run', None, RunOptions, 'Run a process that prompts for sensitive '
-                                  'information on fd 3.')
+        ('run', None, RunOptions, 'Run a bank script')
     ]
 
 

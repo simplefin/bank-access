@@ -3,18 +3,22 @@
 
 import sys
 import os
+import json
 
 from twisted.trial.unittest import TestCase
 from twisted.internet import defer, error
 from twisted.python.failure import Failure
 
+from zope.interface.verify import verifyObject
+
 from StringIO import StringIO
 
 from mock import MagicMock, create_autospec
 
+from banka.interface import IInfoSource
 from banka.inst import directory
-from banka.wrap3 import Wrap3Protocol, wrap3Prompt, StorebackedAnswerer
-from banka.wrap3 import answererReceiver, HumanbackedAnswerer, Runner
+from banka.wrap3 import Wrap3Protocol, StorebackedAnswerer
+from banka.wrap3 import answerProtocol, HumanbackedAnswerer, Runner
 
 
 class Wrap3ProtocolTest(TestCase):
@@ -82,68 +86,20 @@ class Wrap3ProtocolTest(TestCase):
         self.assertEqual(self.failureResultOf(proto.done), err)
 
 
-class wrap3PromptTest(TestCase):
+class answerProtocolTest(TestCase):
 
-    def test_basic(self):
+    def test_prompt_default(self):
         """
-        wrap3Prompt
-        """
-        proto = MagicMock()
-        proto.transport = MagicMock()
-
-        prompts = []
-
-        def getpass(prompt):
-            prompts.append(prompt)
-            return 'hey'
-        wrap3Prompt(getpass, proto, '{"key":"name"}\n')
-
-        self.assertEqual(prompts, ['name? '], "Should call the prompt "
-                         "function with the key received")
-        proto.transport.write.assert_called_once_with('"hey"\n')
-
-    def test_deferred(self):
-        """
-        If the getpass function returns a Deferred, that should be handled.
-        """
-        proto = MagicMock()
-        proto.transport = MagicMock()
-
-        prompts = []
-
-        def getpass(prompt):
-            prompts.append(prompt)
-            return defer.succeed('hey')
-        wrap3Prompt(getpass, proto, '{"key":"name"}\n')
-        self.assertEqual(prompts, ['name? '])
-        proto.transport.write.assert_called_once_with('"hey"\n')
-
-    def test_save(self):
-        """
-        Saves should be ignored because there's nothing to save to.
-        """
-        proto = MagicMock()
-        getpass = MagicMock()
-        wrap3Prompt(getpass, proto, '{"key":"name","action":"save"}\n')
-        self.assertEqual(getpass.call_count, 0, "Should not prompt for "
-                         "save action")
-        self.assertEqual(proto.transport.write.call_count, 0, "Should not "
-                         "write anything back for save action")
-
-
-class answererReceiverTest(TestCase):
-
-    def test_basic(self):
-        """
-        Should call the first function with the JSON dictionary line as keyword
-        arguments then write the JSON response to the protocols transport.
+        Should call the C{prompt} method on the info source by default,
+        then write the response as JSON to the protocol's transport.
         """
         proto = MagicMock()
 
-        answerer = MagicMock(return_value=defer.succeed('foo'))
+        info_source = MagicMock()
+        info_source.prompt.return_value = defer.succeed('foo')
 
-        answererReceiver(answerer, proto, '{"key":"name"}\n')
-        answerer.assert_called_once_with(key='name')
+        answerProtocol(info_source, proto, '{"key":"name"}\n')
+        info_source.prompt.assert_called_once_with(key='name')
         proto.transport.write.assert_called_once_with('"foo"\n')
 
     def test_save(self):
@@ -153,12 +109,35 @@ class answererReceiverTest(TestCase):
         """
         proto = MagicMock()
 
-        answerer = MagicMock(return_value=defer.succeed('foo'))
+        info_source = MagicMock()
+        info_source.save.return_value = defer.succeed('foo')
 
-        answererReceiver(answerer, proto, '{"key":"name","action":"save"}\n')
-        answerer.assert_called_once_with(key='name', action='save')
+        answerProtocol(info_source, proto, json.dumps({
+            "key": "name",
+            "action": "save",
+            "value": "foo",
+        }))
+        info_source.save.assert_called_once_with(key='name', value='foo')
         self.assertEqual(proto.transport.write.call_count, 0, "Should not "
                          "write anything back on save")
+
+    def test_unknown(self):
+        """
+        Only commands that are part of the L{IInfoSource} interface can be
+        called.  If an unknown command is encountered, raise L{TypeError}.
+        """
+        proto = MagicMock()
+
+        info_source = MagicMock(return_value=defer.succeed('foo'))
+
+        self.assertRaises(TypeError, answerProtocol, info_source, proto,
+                          json.dumps({"action": "foo"}))
+        self.assertEqual(info_source.foo.call_count, 0,
+                         "Should not call foo")
+
+        # XXX is this wise?
+        self.assertEqual(proto.transport.write.call_count, 0, "Should not "
+                         "write anything back on the transport")
 
 
 class StorebackedAnswererTest(TestCase):
@@ -179,6 +158,10 @@ class StorebackedAnswererTest(TestCase):
             return answers[prompt_str]
         return f
 
+    def test_IInfoSource(self):
+        dbp = StorebackedAnswerer('store', 'prompt')
+        verifyObject(IInfoSource, dbp)
+
     def test_init(self):
         """
         The L{StorebackedAnswerer} should have a store and a human-prompting
@@ -189,13 +172,13 @@ class StorebackedAnswererTest(TestCase):
         self.assertEqual(dbp.ask_human, 'prompt')
 
     @defer.inlineCallbacks
-    def test_doAction_login(self):
+    def test_prompt_login(self):
         """
         When asked for _login, prompt the human and save the value for later.
         """
         store = yield self.getStore()
         dbp = StorebackedAnswerer(store, self.human({'_login': 'the login'}))
-        result = yield dbp.doAction('_login')
+        result = yield dbp.prompt('_login')
         self.assertEqual(result, 'the login')
         self.assertEqual(dbp.login, 'the login')
 
@@ -203,7 +186,7 @@ class StorebackedAnswererTest(TestCase):
         self.assertFailure(store.get('the login', '_login'), KeyError)
 
     @defer.inlineCallbacks
-    def test_doAction_login_prompt(self):
+    def test_prompt_login_prompt(self):
         """
         The prompt given to the ask_human function can be different than the
         key.
@@ -211,11 +194,11 @@ class StorebackedAnswererTest(TestCase):
         store = yield self.getStore()
         dbp = StorebackedAnswerer(store, self.human({'Account number': '123'}))
 
-        result = yield dbp.doAction('_login', prompt='Account number')
+        result = yield dbp.prompt('_login', prompt='Account number')
         self.assertEqual(result, '123')
 
     @defer.inlineCallbacks
-    def test_doAction_prompt_unicode(self):
+    def test_prompt_unicode(self):
         """
         Unicode should be converted to strings.
         """
@@ -224,13 +207,13 @@ class StorebackedAnswererTest(TestCase):
             u'\N{SNOWMAN}prompt': u'\N{SNOWMAN}value'
         }))
         dbp.login = u'\N{SNOWMAN}login'
-        yield dbp.doAction(u'\N{SNOWMAN}key', prompt=u'\N{SNOWMAN}prompt')
+        yield dbp.prompt(u'\N{SNOWMAN}key', prompt=u'\N{SNOWMAN}prompt')
         result = yield store.get(u'\N{SNOWMAN}login'.encode('utf-8'),
                                  u'\N{SNOWMAN}key'.encode('utf-8'))
         self.assertEqual(result, u'\N{SNOWMAN}value'.encode('utf-8'))
 
     @defer.inlineCallbacks
-    def test_doAction_fromHuman(self):
+    def test_prompt_fromHuman(self):
         """
         By default, the human is asked for every piece of data.  The data is
         then stored in the data store.
@@ -241,8 +224,8 @@ class StorebackedAnswererTest(TestCase):
             'password': 'the password',
         }))
 
-        yield dbp.doAction('_login')
-        password = yield dbp.doAction('password')
+        yield dbp.prompt('_login')
+        password = yield dbp.prompt('password')
         self.assertEqual(password, 'the password', "Should have asked the "
                          "human for the password")
 
@@ -253,7 +236,7 @@ class StorebackedAnswererTest(TestCase):
         self.assertEqual(dbp.login, 'foo', "Should not change the login")
 
     @defer.inlineCallbacks
-    def test_doAction_fromHuman_prompt(self):
+    def test_prompt_fromHuman_prompt(self):
         """
         The prompt to the human can be overridden.
         """
@@ -262,12 +245,12 @@ class StorebackedAnswererTest(TestCase):
             'The password, please': 'the password',
         }))
         dbp.login = 'foo'
-        password = yield dbp.doAction('password', 'The password, please')
+        password = yield dbp.prompt('password', 'The password, please')
         self.assertEqual(password, 'the password', "Should have asked the "
                          "human for the password")
 
     @defer.inlineCallbacks
-    def test_doAction_secondTime(self):
+    def test_prompt_secondTime(self):
         """
         If the data is in the store, get it from the store and not the human.
         """
@@ -279,12 +262,12 @@ class StorebackedAnswererTest(TestCase):
 
         # load the store
         yield store.put('foo', 'somekey', 'real value')
-        result = yield dbp.doAction('somekey')
+        result = yield dbp.prompt('somekey')
         self.assertEqual(result, 'real value', "Should get the value from the "
                          "store if present")
 
     @defer.inlineCallbacks
-    def test_doAction_dontAskHuman(self):
+    def test_prompt_dontAskHuman(self):
         """
         If C{ask_human} is C{False} then don't ask the human.  Instead return
         None.
@@ -293,26 +276,25 @@ class StorebackedAnswererTest(TestCase):
         dbp = StorebackedAnswerer(store, self.human({}))
         dbp.login = 'foo'
 
-        result = yield dbp.doAction('some key', ask_human=False)
+        result = yield dbp.prompt('some key', ask_human=False)
         self.assertEqual(result, None, "Not in store and not going to ask "
                          "the human")
 
     @defer.inlineCallbacks
-    def test_doAction_save(self):
+    def test_save(self):
         """
-        If action is C{'save'} then save the data in the store without any
-        human interaction.
+        Save the data in the store without any human interaction.
         """
         store = yield self.getStore()
         dbp = StorebackedAnswerer(store, self.human({}))
         dbp.login = 'foo'
 
-        yield dbp.doAction('key', action='save', value='some value')
+        yield dbp.save('key', 'some value')
         value = yield store.get('foo', 'key')
         self.assertEqual(value, 'some value', "Should save in store")
 
     @defer.inlineCallbacks
-    def test_doAction_save_unicode(self):
+    def test_save_unicode(self):
         """
         Everything should be turned into bytes.
         """
@@ -320,9 +302,7 @@ class StorebackedAnswererTest(TestCase):
         dbp = StorebackedAnswerer(store, self.human({}))
         dbp.login = u'\N{SNOWMAN}login'
 
-        yield dbp.doAction(u'\N{SNOWMAN}key',
-                           action='save',
-                           value=u'\N{SNOWMAN}value')
+        yield dbp.save(u'\N{SNOWMAN}key', u'\N{SNOWMAN}value')
         value = yield store.get(u'\N{SNOWMAN}login'.encode('utf-8'),
                                 u'\N{SNOWMAN}key'.encode('utf-8'))
         self.assertEqual(value, u'\N{SNOWMAN}value'.encode('utf-8'),
@@ -336,50 +316,54 @@ class HumanbackedAnswererTest(TestCase):
             return answers[prompt_str]
         return f
 
+    def test_IInfoSource(self):
+        hba = HumanbackedAnswerer('ask_human')
+        verifyObject(IInfoSource, hba)
+
     @defer.inlineCallbacks
-    def test_doAction_prompt(self):
+    def test_prompt(self):
         """
         A prompt will be sent to the ask_human function.
         """
         hba = HumanbackedAnswerer(self.human({'_login': 'foo'}))
-        result = yield hba.doAction('_login')
+        result = yield hba.prompt('_login')
         self.assertEqual(result, 'foo')
 
     @defer.inlineCallbacks
-    def test_doAction_alternatePrompt(self):
+    def test_prompt_alternatePrompt(self):
         """
         If the C{'prompt'} keyword is given, use that for the prompt.
         """
         hba = HumanbackedAnswerer(self.human({'Username': 'foo'}))
-        result = yield hba.doAction('_login', prompt='Username')
+        result = yield hba.prompt('_login', prompt='Username')
         self.assertEqual(result, 'foo')
 
     @defer.inlineCallbacks
-    def test_doAction_unicode(self):
+    def test_prompt_unicode(self):
         """
         Results should be bytes, not unicode.
         """
         hba = HumanbackedAnswerer(self.human({'_login': u'\N{SNOWMAN}'}))
-        result = yield hba.doAction('_login')
+        result = yield hba.prompt('_login')
         self.assertEqual(result, u'\N{SNOWMAN}'.encode('utf-8'))
         self.assertEqual(type(result), str)
 
     @defer.inlineCallbacks
-    def test_doAction_dontAskHuman(self):
+    def test_prompt_dontAskHuman(self):
         """
         If the human ought not be asked, then return None.
         """
         hba = HumanbackedAnswerer(self.human({'_login': 'foo'}))
-        result = yield hba.doAction('_login', ask_human=False)
+        result = yield hba.prompt('_login', ask_human=False)
         self.assertEqual(result, None, "No human should have been asked")
 
     @defer.inlineCallbacks
-    def test_doAction_save(self):
+    def test_save(self):
         """
-        The save action is ignored and given a None response.
+        Saving is a nop for a HumanbackedAnswerer.
         """
         hba = HumanbackedAnswerer(self.human({}))
-        result = yield hba.doAction('key', action='save', value='bar')
+        result = yield hba.save('key', 'bar')
         self.assertEqual(result, None)
 
 
@@ -405,10 +389,10 @@ class RunnerTest(TestCase):
         4. Return a deferred that callsback when the process is done.
         """
         reactor = MagicMock()
-        answerer = MagicMock()
+        info_source = MagicMock()
         proto = MagicMock()
 
-        r = Runner(answerer)
+        r = Runner(info_source)
         r.stdout = 'stdout'
         r.stderr = 'stderr'
         r.protocolFactory = create_autospec(r.protocolFactory,
@@ -416,10 +400,10 @@ class RunnerTest(TestCase):
         r.ch3Maker = create_autospec(r.ch3Maker, return_value='ch3_receiver')
         r.scriptPath = create_autospec(r.scriptPath, return_value='abs/path')
 
-        self.assertEqual(r.answerer, answerer)
+        self.assertEqual(r.info_source, info_source)
 
         r.run(reactor, ('arg1', 'arg2', 'arg3'))
-        r.ch3Maker.assert_called_once_with(answerer.doAction)
+        r.ch3Maker.assert_called_once_with(info_source)
         r.scriptPath.assert_called_once_with('arg1')
         r.protocolFactory.assert_called_once_with('ch3_receiver',
                                                   stdout='stdout',
