@@ -188,6 +188,7 @@ class StorebackedAnswerer(object):
         """
         Get an alias for an account id.
         """
+        account_id = _encode(account_id)
         try:
             alias = yield self.store.get('__alias', account_id)
         except KeyError:
