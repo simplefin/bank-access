@@ -5,6 +5,7 @@ from StringIO import StringIO
 import sys
 import os
 import json
+from uuid import uuid4
 
 from functools import partial
 
@@ -117,6 +118,16 @@ class HumanbackedAnswerer(object):
         """
         return None
 
+    def alias(self, account_id):
+        """
+        Return a random alias.
+
+        Why random?  Because it's the most secure thing to do.  We don't want
+        to reveal anything about the real account id from the alias.  If you
+        want a consistent alias, use L{StorebackedAnswerer} instead.
+        """
+        return 'TRANSIENT-' + str(uuid4()).replace('-', '')
+
 
 class StorebackedAnswerer(object):
     """
@@ -171,6 +182,18 @@ class StorebackedAnswerer(object):
         key = _encode(key)
         value = _encode(value)
         return self.store.put(_encode(self.login), key, value)
+
+    @defer.inlineCallbacks
+    def alias(self, account_id):
+        """
+        Get an alias for an account id.
+        """
+        try:
+            alias = yield self.store.get('__alias', account_id)
+        except KeyError:
+            alias = ('%s%s' % (uuid4(), uuid4())).replace('-', '')
+            yield self.store.put('__alias', account_id, alias)
+        defer.returnValue(alias)
 
 
 class Runner(object):

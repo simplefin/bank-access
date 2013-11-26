@@ -79,3 +79,17 @@ class ParentInfoSourceTest(TestCase):
             'key': 'foo',
             'value': 'bar',
         })
+
+    def test_alias(self):
+        """
+        Alias will ask for an alias
+        """
+        p = self.fake()
+        p.reader.return_value = 'something'
+        r = p.alias('account id')
+        p.writer.assert_called_once_with({
+            'action': 'alias',
+            'account_id': 'account id',
+        })
+        p.reader.assert_called_once_with()
+        self.assertEqual(r, 'something')
