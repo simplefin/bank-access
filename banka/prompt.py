@@ -11,6 +11,10 @@ information.
 import os
 import json
 
+from zope.interface import implements
+
+from banka.interface import IInfoSource
+
 
 def writeTo3(question):  # pragma: no cover
     """
@@ -26,31 +30,34 @@ def readFromStdin():  # pragma: no cover
     return json.loads(raw_input())
 
 
-class _Prompter(object):
+class ParentInfoSource(object):
     """
+    I get information from the parent process.
     """
 
-    def __init__(self, writer=writeTo3, reader=readFromStdin):
-        """
-        @param writer: A function that accepts a prompt dictionary and is
-            responsible for transmitting a corresponding request to whoever
-            should answer the prompt (e.g. the parent process).
+    implements(IInfoSource)
 
-        @param reader: A function of no arguments that is called immediately
-            after writing a prompt if an answer is expected.
-        """
-        self.writer = writer
-        self.reader = reader
+    def __init__(self):
+        self.writer = writeTo3
+        self.reader = readFromStdin
 
-    def prompt(self, key, ask_human=True):
+    def prompt(self, key, prompt=None, ask_human=True):
         """
-        Prompt for some information.
+        Request a piece of data from the parent process.
 
-        @param key: String key name for this information.
-        @param ask_human: Pass along to he who answers whether or not a human
-            should be asked for the answer.
+        @param key: String key identifying information.
+        @param prompt: Optional alternate prompt for piece of data.
+        @param ask_human: C{True} means I may ask a human.  C{False} means
+            I will not ask a human.
+
+        @return: The value for the piece of requested data.
         """
-        msg = {'key': key}
+        msg = {
+            'action': 'prompt',
+            'key': key,
+        }
+        if prompt:
+            msg['prompt'] = prompt
         if not ask_human:
             msg['ask_human'] = False
         self.writer(msg)
@@ -58,21 +65,14 @@ class _Prompter(object):
 
     def save(self, key, value):
         """
-        Indicate that some information should be saved for later retrieval.
-
-        @param key: Key to be used to retrieve data.
-        @param value: Value to save
-        @type value: str
-
-        @return: None
+        Request a piece of data be saved.
         """
         self.writer({
-            'key': key,
             'action': 'save',
+            'key': key,
             'value': value,
         })
 
-
-_prompter = _Prompter()
+_prompter = ParentInfoSource()
 prompt = _prompter.prompt
 save = _prompter.save

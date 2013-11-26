@@ -1,60 +1,81 @@
 # Copyright (c) The SimpleFIN Team
 # See LICENSE for details.
-
 from unittest import TestCase
+from zope.interface.verify import verifyObject
 from mock import MagicMock
 
-from banka.prompt import _Prompter, writeTo3, readFromStdin
+from banka.interface import IInfoSource
+from banka.prompt import writeTo3, readFromStdin, ParentInfoSource
 
 
-class PrompterTest(TestCase):
+class ParentInfoSourceTest(TestCase):
+
+    def fake(self):
+        p = ParentInfoSource()
+        p.writer = MagicMock()
+        p.reader = MagicMock()
+        return p
+
+    def test_IInfoSource(self):
+        verifyObject(IInfoSource, ParentInfoSource())
 
     def test_default(self):
         """
-        Prompter will use raw_input for reader and writeTo3 for writer.
+        By default, L{ParentInfoSource} reads from stdin and writes to channel
+        3.
         """
-        p = _Prompter()
-        self.assertEqual(p.reader, readFromStdin)
+        p = ParentInfoSource()
         self.assertEqual(p.writer, writeTo3)
+        self.assertEqual(p.reader, readFromStdin)
 
-    def test_simple(self):
+    def test_prompt(self):
         """
-        If a single argument is provided, then it is the key of the prompt,
-        and will be written using the writer method.
+        Prompt should write a prompt to the writer and get a response from
+        the reader.
         """
-        writer = []
-        reader = MagicMock(return_value='something')
-        p = _Prompter(writer.append, reader)
+        p = self.fake()
+        p.reader.return_value = 'Returned value'
         r = p.prompt('foo')
-        self.assertEqual(writer, [{"key": "foo"}])
-        reader.assert_called_once_with()
-        self.assertEqual(r, 'something')
+        p.writer.assert_called_once_with({
+            'action': 'prompt',
+            'key': 'foo',
+        })
+        p.reader.assert_called_once_with()
+        self.assertEqual(r, 'Returned value',
+                         "Should return value from reader")
 
     def test_prompt_dontAskHuman(self):
         """
-        If C{ask_human} is C{False}, then include that in the prompt.
+        C{ask_human} should be passed through.
         """
-        writer = []
-        reader = MagicMock(return_value='something')
-        p = _Prompter(writer.append, reader)
-        r = p.prompt('foo', ask_human=False)
-        self.assertEqual(writer, [{'key': 'foo', 'ask_human': False}])
-        reader.assert_called_once_with()
-        self.assertEqual(r, 'something')
+        p = self.fake()
+        p.prompt('foo', ask_human=False)
+        p.writer.assert_called_once_with({
+            'action': 'prompt',
+            'key': 'foo',
+            'ask_human': False,
+        })
+
+    def test_prompt_alternatePrompt(self):
+        """
+        C{prompt} should be passed through.
+        """
+        p = self.fake()
+        p.prompt('foo', prompt='bar')
+        p.writer.assert_called_once_with({
+            'action': 'prompt',
+            'key': 'foo',
+            'prompt': 'bar',
+        })
 
     def test_save(self):
         """
-        You can request that data be saved, and expect no answer.
+        Save will write a save prompt to the writer.
         """
-        writer = []
-        reader = MagicMock(return_value='something')
-        p = _Prompter(writer.append, reader)
-        r = p.save('foo', 'some value')
-        self.assertEqual(writer, [{
-            'key': 'foo',
+        p = self.fake()
+        p.save('foo', 'bar')
+        p.writer.assert_called_once_with({
             'action': 'save',
-            'value': 'some value',
-        }])
-        self.assertEqual(reader.call_count, 0, "Should not have asked for "
-                         "an answer back")
-        self.assertEqual(r, None, "Should get None back")
+            'key': 'foo',
+            'value': 'bar',
+        })
