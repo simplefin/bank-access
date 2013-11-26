@@ -3,9 +3,8 @@
 
 from twisted.internet import defer, threads
 import scrypt
-from hashlib import sha256
-from Crypto import Random
-from Crypto.Cipher import AES
+from keyczar.keys import AesKey, HmacKey
+from keyczar import util
 
 
 class _HashingCryptingStore(object):
@@ -105,8 +104,10 @@ class PasswordStore(_HashingCryptingStore):
     password when stored in the store.
     """
 
-    iv_size = 16
+    _key = None
+    key_size = 32
     salt = 'non-random salt for PasswordStore'
+    password_salt = 'some password salt'
 
     def __init__(self, store, password):
         """
@@ -114,46 +115,25 @@ class PasswordStore(_HashingCryptingStore):
         @param password: A string password
         """
         self.store = store
-        self.pw_hash = sha256(password).digest()
+        self.password = password
 
     def _hash(self, data):
         return threads.deferToThread(scrypt.hash, data, self.salt)
 
-    def _mkIV(self):
-        """
-        Make a random initialization vector.
-        """
-        rnd = Random.new()
-        return rnd.read(self.iv_size)
+    def _getKey(self):
+        if self._key:
+            return self._key
+        key_bytes = scrypt.hash(self.password, self.password_salt,
+                                buflen=self.key_size)
+        key_string = util.Base64WSEncode(key_bytes)
+        hmac_key = HmacKey(key_string)
+        self._key = AesKey(key_string, hmac_key)
+        return self._key
 
     def _encrypt(self, plaintext):
-        # XXX that I'm making my own IV and padding makes me think I'm doing
-        # it wrong.
-        iv = self._mkIV()
-        crypter = AES.new(self.pw_hash, AES.MODE_CBC, iv)
-
-        padding_length = 16 - (len(plaintext) % 16)
-        rnd = Random.new()
-        padded_plaintext = plaintext + rnd.read(padding_length)
-
-        def prefixWithDetails(cipher, iv, padding_length):
-            return '%d %s%s' % (padding_length, iv, cipher)
-        d = threads.deferToThread(crypter.encrypt, padded_plaintext)
-        d.addCallback(prefixWithDetails, iv, padding_length)
-        return d
+        key = self._getKey()
+        return threads.deferToThread(key.Encrypt, plaintext)
 
     def _decrypt(self, ciphertext):
-        # XXX see comment in _encrypt
-        padding, ciphertext = ciphertext.split(' ', 1)
-        padding_length = int(padding)
-
-        iv = ciphertext[:self.iv_size]
-        ciphertext = ciphertext[self.iv_size:]
-
-        crypter = AES.new(self.pw_hash, AES.MODE_CBC, iv)
-
-        def stripPadding(plaintext, padding_length):
-            return plaintext[:-padding_length]
-        d = threads.deferToThread(crypter.decrypt, ciphertext)
-        d.addCallback(stripPadding, padding_length)
-        return d
+        key = self._getKey()
+        return threads.deferToThread(key.Decrypt, ciphertext)
