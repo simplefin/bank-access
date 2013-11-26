@@ -11,6 +11,9 @@ from functools import partial
 from twisted.internet.protocol import ProcessProtocol
 from twisted.internet import defer
 
+from zope.interface import implements
+
+from banka.interface import IInfoSource
 from banka.inst import directory
 
 
@@ -103,6 +106,8 @@ class HumanbackedAnswerer(object):
     I get all answers from a human.
     """
 
+    implements(IInfoSource)
+
     def __init__(self, ask_human):
         self.ask_human = ask_human
 
@@ -110,11 +115,12 @@ class HumanbackedAnswerer(object):
         """
         Handle a data request.
         """
+        raise Exception('fix me')
         action = kwargs.pop('action', 'prompt')
         method = getattr(self, 'do_' + action)
         return method(*args, **kwargs)
 
-    def do_prompt(self, key, prompt=None, ask_human=True):
+    def prompt(self, key, prompt=None, ask_human=True):
         """
         Prompt the human for some bit of information.
         """
@@ -123,7 +129,7 @@ class HumanbackedAnswerer(object):
             return None
         return _encode(self.ask_human(prompt))
 
-    def do_save(self, *args, **kwargs):
+    def save(self, *args, **kwargs):
         """
         Ignore save requests (since we're not going to expect humans to write
         down long bytestrings).
@@ -142,6 +148,8 @@ class StorebackedAnswerer(object):
     @ivar login: The login string to be used when asked for C{'_login'}
     """
 
+    implements(IInfoSource)
+
     login = None
 
     def __init__(self, store, ask_human):
@@ -152,12 +160,13 @@ class StorebackedAnswerer(object):
         """
         Handle a data request.
         """
+        raise Exception('Change me')
         action = kwargs.pop('action', 'prompt')
         method = getattr(self, 'do_' + action)
         return method(*args, **kwargs)
 
     @defer.inlineCallbacks
-    def do_prompt(self, key, prompt=None, ask_human=True):
+    def prompt(self, key, prompt=None, ask_human=True):
         """
         Get a piece of data either from the store or from a human.
 
@@ -186,7 +195,7 @@ class StorebackedAnswerer(object):
             yield self.store.put(login, key, value)
         defer.returnValue(value)
 
-    def do_save(self, key, value):
+    def save(self, key, value):
         """
         Save some data in the store.
         """
