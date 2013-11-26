@@ -11,7 +11,7 @@ import requests
 
 from ofxparse.ofxparse import Ofx, Account, AccountType, OfxParser
 
-from banka.prompt import prompt
+from banka.prompt import prompt, alias, replaceInsecureIDs
 from banka.ofx.client import OFXClient
 from banka.ofx.template import OFX103RequestMaker
 from banka.ofx.parse import ofxToDict
@@ -153,6 +153,21 @@ class OFXClientTest(TestCase):
         x = OFXClient()
         self.assertEqual(x._ofxToDict, ofxToDict)
 
+    def test__alias(self):
+        """
+        C{_alias} should be L{banka.prompt.alias} by default.
+        """
+        x = OFXClient()
+        self.assertEqual(x._alias, alias)
+
+    def test__replaceInsecureIDs(self):
+        """
+        C{_replaceInsecureIDs} should be L{banka.prompt.replaceInsecureIDs}
+        by default.
+        """
+        x = OFXClient()
+        self.assertEqual(x._replaceInsecureIDs, replaceInsecureIDs)
+
     def test_requestAccountList(self):
         """
         Requesting an account list should get the credentials, use the
@@ -225,6 +240,8 @@ class OFXClientTest(TestCase):
                                              return_value='account list')
         x._parseOfx = create_autospec(x._parseOfx, return_value='return ofx')
         x._ofxToDict = create_autospec(x._ofxToDict, return_value='the dict')
+        x._replaceInsecureIDs = create_autospec(x._replaceInsecureIDs,
+                                                return_value='aliased dict')
 
         x.domain = 'foo.com'
         x.ofx_url = 'https://ofx.example.com'
@@ -247,4 +264,5 @@ class OFXClientTest(TestCase):
                                                 headers=headers)
         x._parseOfx.assert_called_once_with('The response text')
         x._ofxToDict.assert_called_once_with('return ofx', 'foo.com')
-        self.assertEqual(d, 'the dict')
+        x._replaceInsecureIDs.assert_called_once_with(x._alias, 'the dict')
+        self.assertEqual(d, 'aliased dict')

@@ -6,6 +6,7 @@ from mock import MagicMock
 
 from banka.interface import IInfoSource
 from banka.prompt import writeTo3, readFromStdin, ParentInfoSource
+from banka.prompt import replaceInsecureIDs
 
 
 class ParentInfoSourceTest(TestCase):
@@ -93,3 +94,40 @@ class ParentInfoSourceTest(TestCase):
         })
         p.reader.assert_called_once_with()
         self.assertEqual(r, 'something')
+
+
+class replaceInsecureIDTest(TestCase):
+
+    def test_works(self):
+        """
+        Should remove the C{_insecure_id} item and add an aliased C{id}
+        item to all the accounts.
+        """
+        res = replaceInsecureIDs(lambda x: x+'secure', {
+            'accounts': [
+                {
+                    '_insecure_id': 'foo',
+                    'alist': [
+                        {'of': 'things'},
+                    ]
+                },
+                {
+                    '_insecure_id': 'bar',
+                    'other': 'stuff'
+                }
+            ]
+        })
+        self.assertEqual(res, {
+            'accounts': [
+                {
+                    'id': 'foosecure',
+                    'alist': [
+                        {'of': 'things'},
+                    ]
+                },
+                {
+                    'id': 'barsecure',
+                    'other': 'stuff'
+                }
+            ]
+        })

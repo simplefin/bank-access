@@ -98,3 +98,13 @@ _prompter = ParentInfoSource()
 prompt = _prompter.prompt
 save = _prompter.save
 alias = _prompter.alias
+
+
+def replaceInsecureIDs(alias_fn, data):
+    """
+    Remove all C{_insecure_id} instances and replace with aliased C{id}s.
+    """
+    # XXX not worrying about editing in place for now.
+    for account in data['accounts']:
+        account['id'] = alias_fn(account.pop('_insecure_id'))
+    return data

@@ -6,7 +6,7 @@ from StringIO import StringIO
 
 from ofxparse.ofxparse import AccountType, OfxParser
 
-from banka.prompt import prompt
+from banka.prompt import prompt, alias, replaceInsecureIDs
 from banka.ofx.template import OFX103RequestMaker
 from banka.ofx.parse import ofxToDict
 
@@ -28,6 +28,8 @@ class OFXClient(object):
         @param _prompt: A function to use for sensitive data prompting.
         """
         self._ofxToDict = ofxToDict
+        self._alias = alias
+        self._replaceInsecureIDs = replaceInsecureIDs
         self.prompt = _prompt or prompt
         self.requests = requests
         self.requestMaker = OFX103RequestMaker()
@@ -121,4 +123,5 @@ class OFXClient(object):
                                       data=payload, headers=headers)
 
         ofx = self._parseOfx(response.text)
-        return self._ofxToDict(ofx, self.domain)
+        data = self._ofxToDict(ofx, self.domain)
+        return self._replaceInsecureIDs(self._alias, data)
