@@ -1,0 +1,106 @@
+---
+name: Example Bank
+domain: examplebank.com
+maintainers:
+  - someone
+  - someone else
+access:
+  method: ofx
+  details:
+    url: https://ofx.examplebank.com
+    fi_id: 12345
+    fi_org: Example Bank
+
+
+---
+name: Stone Age Bank
+domain: stonebank.com
+maintainers:
+  - guy
+access:
+  method: http
+  steps:
+    - name: Fetch login
+      action: http
+      method: GET
+      url: https://stonebank.com/login
+    
+    - name: Request account number
+      action: user-input
+      question: "Account number"
+      variable: account_number
+      static: true
+    
+    - name: Submit login form
+      action: submit-form
+      form_id: "#login-form"
+      params:
+        account_number: $account_number
+    
+    - name: Request password
+      action: user-input
+      question: "Password"
+      variable: password
+      static: true
+
+    - name: Submit password form
+      action: submit-form
+      form_id: "#password-form"
+      params:
+        password: $password
+
+    - name: Extract MFA question
+      action: extract-data
+      xpath: /mfaquestions/text[1]
+      variable: mfa_question
+
+    - name: Request MFA answer
+      action: user-input
+      question: $mfa_question
+      variable: mfa_answer
+      static: true
+
+    - name: Submit MFA form
+      action: submit-form
+      form_id: /mfaquestions/form
+      params:
+        answer: $mfa_answer
+
+    - name: Get to download page
+      action: follow-link
+      xpath: /download/a[1]
+
+    - name: Request start date
+      action: user-input
+      question: "Start date"
+      variable: start_date
+      static: false
+
+    - name: Request end date
+      action: user-input
+      question: "End date"
+      variable: end_date
+      static: false
+
+    - name: Get account list
+      action: extract-data
+      xpath: /account/list/option
+      variable: accounts
+
+    - name: Download OFX files
+      action: loop
+      iterable: account in accounts
+      steps:
+
+        - name: Download OFX file
+          action: http
+          url: https://stonebank.com/portal/download
+          method: POST
+          params:
+            start_date: $start_date
+            end_date: $end_date
+            account_id: $account.attrs.value
+
+        - name: Parse it
+          action: read-ofx-file
+
