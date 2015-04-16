@@ -8,5 +8,6 @@ maintainers:
   - github.com/iffy
 ofx:
   url: https://ofx.americafirst.com
-  fi_id: 54324
-  fi_org: America First Credit Union
+  id: 54324
+  org: America First Credit Union
+  version: "103"

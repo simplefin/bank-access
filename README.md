@@ -76,6 +76,17 @@ The file may also contain other information as needed.
 
 # Writing a Script #
 
+## Environment ##
+
+The scripts can expect to be called with the following environment variables:
+
+- `DATASTORE_URL` is a URL of a key-value store.  Use this to ask for and save credentials and any state that ought to be maintained between invocations (such as cookies).  The URL will scoped to a specific user, so you can use generic keys like `"account_id"` rather than `"user55/account_id"`.
+
+- `SCRIPTS_ROOT` will be the absolute path to `banka/` so that you can make use of any utility scripts inside `banka/util/`.
+
+
+## Good ideas ##
+
 How you write the script depends on what the bank provides.  In order of preference, try the following when writing a script:
 
 1. OFX Server
