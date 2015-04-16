@@ -1,0 +1,4 @@
+# Copyright (c) The SimpleFIN Team
+# See LICENSE for details.
+
+PyYAML==3.11

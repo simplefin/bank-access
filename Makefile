@@ -13,4 +13,4 @@ test-copyright:
 	@bash tests/check-license.sh
 
 test-info-yml:
-	@bash tests/assertminimuminfo.sh banka
+	@bash tests/assertminimuminfo.sh banka/inst

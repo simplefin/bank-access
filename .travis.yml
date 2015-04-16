@@ -1,6 +1,12 @@
 language: python
 python: "2.7"
 
+install:
+  - pip install -r test-requirements.txt
+
 script:
   - make test-copyright
   - make test-info-yml
+
+notifications:
+    email: true

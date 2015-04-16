@@ -1,0 +1,84 @@
+#!/usr/bin/env python
+# Copyright (c) The SimpleFIN Team
+# See LICENSE for details.
+from banka.args import listAccountsParser
+from banka.prompt import prompt
+import sys
+import os
+import mechanize
+import cookielib
+from bs4 import BeautifulSoup as BS
+
+
+def debug(msg):
+    sys.stderr.write('%s\n' % (msg,))
+    sys.stderr.flush()
+
+
+def login(browser):
+    username = prompt('username')
+    #password = prompt('password')
+    
+    # username
+    browser.open('https://secure.ally.com/allyWebClient/login.do')
+    debug(browser.title())
+
+    browser.select_form(name='actionForm')
+    browser["userNamePvtEncrypt"] = username
+    browser.submit()
+
+    # Is it the Additional Verification Needed page?
+    debug(browser.title())
+    if browser.title().lower().count('additional verification'):
+        getThroughAdditionalVerificationNeeded(browser)
+
+
+def getThroughAdditionalVerificationNeeded(browser):
+    for form in browser.forms():
+        debug(form)
+        debug('Additional verification needed')
+        debug(dir(form))
+        debug(form["selectedOtpMethodType"])
+        debug(dir(form["selectedOtpMethodType"]))
+        debug(form.controls)
+        radio = form.find_control(name="selectedOtpMethodType")
+        soup = BS(browser.response().get_data())
+        print soup.prettify()
+
+        print dir(radio)
+        print radio.possible_items()
+        print radio.pairs()
+        print radio.get_labels()
+        print radio.get_items()
+    
+    
+
+
+def getBrowser():
+    browser = mechanize.Browser()
+    cookie_jar = cookielib.LWPCookieJar()
+    browser.set_cookiejar(cookie_jar)
+    browser.set_handle_equiv(True)
+    browser.set_handle_gzip(True)
+    browser.set_handle_redirect(True)
+    browser.set_handle_referer(True)
+    browser.set_handle_robots(False)
+    browser.set_handle_refresh(mechanize._http.HTTPRefreshProcessor(), max_time=1)
+
+    browser.addheaders = [('User-agent',
+        'Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.0.1) Gecko/2008071615 Fedora/3.0.1-1.fc9 Firefox/3.0.1')]
+    return browser
+
+
+def main(args):
+    parser = listAccountsParser()
+    args = parser.parse_args(args)
+    start_date = args.start_date
+    end_date = args.end_date
+
+    browser = getBrowser()
+    login(browser)
+
+
+if __name__ == '__main__':
+    main(sys.argv[1:])

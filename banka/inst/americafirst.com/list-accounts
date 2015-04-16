@@ -1,0 +1,38 @@
+#!/usr/bin/env python
+# Copyright (c) The SimpleFIN Team
+# See LICENSE for details.
+from banka.args import listAccountsParser
+from banka.ofx.client import OFXClient
+from banka.ofx.parse import toJson
+
+import sys
+import os
+
+
+def log(msg):
+    sys.stderr.write('%s\n' % (msg,))
+    sys.stderr.flush()
+
+
+def main(args):
+    parser = listAccountsParser()
+    args = parser.parse_args(args)
+    start_date = args.start_date
+    end_date = args.end_date
+
+    client = OFXClient()
+
+    log("Reading OFX server details")
+    info_yml = os.path.abspath(os.path.join(__file__, '../info.yml'))
+    client.readServerDetails(info_yml)
+
+    log("Requesting accounts")
+    accounts = client.requestAccountList()
+
+    log("Requesting statements")
+    data = client.requestStatements(accounts, start_date, end_date)
+    print toJson(data)
+
+
+if __name__ == '__main__':
+    main(sys.argv[1:])

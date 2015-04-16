@@ -1,0 +1,8 @@
+# Copyright (c) The SimpleFIN Team
+# See LICENSE for details.
+
+---
+name: Ally Bank
+domain: ally.com
+maintainers:
+  - github.com/iffy
