@@ -36,10 +36,19 @@ Install (siloscript)[https://github.com/simplefin/siloscript]:
 
     pip install git+git://github.com/simplefin/siloscript.git@master
 
-Run stuff
+Clone this repo:
 
-XXX
+  
+    git clone https://github.com/simplefin/bank-access.git
+    cd bank-access
 
+Start the siloscript server pointed at the bank access scripts:
+
+    siloscript serve --scripts banka/inst
+
+Use the debugging page to run one of the bank scripts:
+
+    http://127.0.0.1:9600/static/debug.html
 
 
 ## If your bank isn't listed ##
