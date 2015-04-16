@@ -6,7 +6,7 @@
 
 EXIT_CODE=0
 INSTDIR=$1
-INSTDIRS=$(find $INSTDIR -type d -d 1)
+INSTDIRS=$(find $INSTDIR -type d -depth 1)
 REQUIRED_FIELDS="name domain maintainers"
 for instdir in $INSTDIRS; do
     infoyml="${instdir}/info.yml"

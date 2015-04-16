@@ -2,12 +2,25 @@
 Copyright (c) The SimpleFIN Team
 See LICENSE for details.
 -->
+
 [![Build Status](https://travis-ci.org/simplefin/bank-access.png?branch=master)](https://travis-ci.org/simplefin/bank-access)
 
+# THE Goal #
+
+THE Goal of this project is self-destruction.  We would like to live in a world where this project doesn't need to exist.  But until the banks of the world implement a secure, standardized way to access financial data, a project such as this must exist to fill that gap.
+
+Banks implementing [SimpleFIN](http://simplefin.org) is one way to achieve this goal.  But any secure, standardized method would suffice.
+
+Tell your bank you want SimpleFIN!
+
+And please contribute a script for your bank!
+
+
+
+# What's in here? #
+
 This repository contains a collection of scripts can be used to
-programmatically get bank transaction information.  The scripts herein only
-read data and do not change the financial state of a bank (such as doing a
-transfer).
+programmatically get bank transaction information.  The scripts herein only read data and do not change the financial state of a bank (such as doing a transfer).
 
 In this document, the following terms are used interchangeably:
 
@@ -17,51 +30,16 @@ In this document, the following terms are used interchangeably:
 
 
 
-# Goal #
-
-We want the banks to implement [SimpleFIN](http://simplefin.org),
-so eventually we won't need this repository.  These scripts exist as a bridge
-from banks which don't implement SimpleFIN to tools which expect SimpleFIN.  
-
-Tell your bank you want SimpleFIN!
-
-And please contribute a script for your bank!
-
-
-
-# Installation #
-
-Install directly from Github:
-
-    pip install -e git+https://github.com/simplefin/bank-access.git@master#egg=banka
-
-Or clone this repo then:
-
-    pip install -r requirements.txt
-    python setup.py install
-
-
 # How to use this repo #
 
-Check if your bank is supported either by looking in the
-[`banka/inst` directory](banka/inst/) or by installing the package (as above)
-and running:
+Install (siloscript)[https://github.com/simplefin/siloscript]:
 
-    banka list
+    pip install git+git://github.com/simplefin/siloscript.git@master
 
+Run stuff
 
+XXX
 
-## If your bank is listed ##
-
-If your bank is listed, then get your transaction data like this:
-
-    banka run <BANK DOMAIN>/list-accounts
-
-which will prompt you for your credentials and write a JSON string to stdout.
-For more options,
-run with `--help`:
-
-    banka run --help
 
 
 ## If your bank isn't listed ##
@@ -90,11 +68,7 @@ The `info.yml` file should have at least the following information:
     maintainers:
       - joe (joe@example.com)
 
-`maintainers` is a list of people who are willing to maintain the scripts
-within the directory (i.e. test the scripts when the underlying library
-changes or fix them when the bank breaks them).  Include as much contact
-information as you feel comfortable sharing.  A URL to your Github profile
-would be fine.
+`maintainers` is a list of people who are willing to maintain the scripts within the directory (i.e. test the scripts when the underlying library changes or fix them when the bank breaks them).  Include as much contact information as you feel comfortable sharing.  A URL to your Github profile would be fine.
 
 The file may also contain other information as needed.
 
@@ -102,8 +76,7 @@ The file may also contain other information as needed.
 
 # Writing a Script #
 
-How you write the script depends on what the bank provides.  In order of
-preference, try the following when writing a script:
+How you write the script depends on what the bank provides.  In order of preference, try the following when writing a script:
 
 1. OFX Server
 
