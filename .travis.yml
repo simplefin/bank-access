@@ -1,14 +1,6 @@
 language: python
-python:
-  - "2.6"
-  - "2.7"
-  - "pypy"
+python: "2.7"
 
-matrix:
-  allow_failures:
-    - python: "pypy"
-
-install:
-  - pip install -r test-requirements.txt --use-mirrors
-
-script: make test
+script:
+  - make test-copyright
+  - make test-info-yml
