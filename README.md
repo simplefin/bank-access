@@ -32,6 +32,17 @@ In this document, the following terms are used interchangeably:
 
 # How to use this repo #
 
+## With Docker ##
+
+If you have docker installed, do this:
+
+    docker run -p 8080:80 simplefin/banka
+
+Then go to http://127.0.0.1:8080/static/debug.html and run the script for your bank.
+
+
+## Manual installation ##
+
 Install (siloscript)[https://github.com/simplefin/siloscript]:
 
     pip install git+git://github.com/simplefin/siloscript.git@master

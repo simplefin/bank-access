@@ -1,7 +1,7 @@
 # Copyright (c) The SimpleFIN Team
 # See LICENSE for details.
 
-.phony: test test-copyright test-info-yml
+.phony: test test-copyright test-info-yml simplefin/banka
 
 
 test:
@@ -14,3 +14,7 @@ test-copyright:
 
 test-info-yml:
 	@bash tests/assertminimuminfo.sh banka/inst
+
+
+simplefin/banka:
+	docker build -t simplefin/banka .
