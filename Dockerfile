@@ -1,3 +1,6 @@
+# Copyright (c) The SimpleFIN Team
+# See LICENSE for details.
+
 FROM ubuntu:14.04
 MAINTAINER iffy
 
