@@ -16,6 +16,10 @@ Tell your bank you want SimpleFIN!
 And please contribute a script for your bank!
 
 
+# Thanks #
+
+Huge thank you to captin411 and this project https://github.com/captin411/ofxclient which makes it easy to connect to most banks.
+
 
 # What's in here? #
 
@@ -30,36 +34,16 @@ In this document, the following terms are used interchangeably:
 
 
 
-# How to use this repo #
+# How it works #
 
-## With Docker ##
+Each bank access script expects to have a secure key value store available to it as an HTTP server.  The (siloscript)[https://github.com/simplefin/siloscript] project provides such a server.
+
+
+## Docker Quickstart ##
 
 If you have docker installed, do this:
 
-    docker run -p 8080:80 simplefin/banka
-
-Then go to http://127.0.0.1:8080/static/debug.html and run the script for your bank.
-
-
-## Manual installation ##
-
-Install (siloscript)[https://github.com/simplefin/siloscript]:
-
-    pip install git+git://github.com/simplefin/siloscript.git@master
-
-Clone this repo:
-
-  
-    git clone https://github.com/simplefin/bank-access.git
-    cd bank-access
-
-Start the siloscript server pointed at the bank access scripts:
-
-    siloscript serve --scripts banka/inst
-
-Use the debugging page to run one of the bank scripts:
-
-    http://127.0.0.1:9600/static/debug.html
+    docker run -it simplefin/banka siloscript run banka/inst/chase.com/list-accounts
 
 
 ## If your bank isn't listed ##
@@ -101,8 +85,6 @@ The file may also contain other information as needed.
 The scripts can expect to be called with the following environment variables:
 
 - `DATASTORE_URL` is a URL of a key-value store.  Use this to ask for and save credentials and any state that ought to be maintained between invocations (such as cookies).  The URL will scoped to a specific user, so you can use generic keys like `"account_id"` rather than `"user55/account_id"`.
-
-- `SCRIPTS_ROOT` will be the absolute path to `banka/` so that you can make use of any utility scripts inside `banka/util/`.
 
 
 ## Good ideas ##
@@ -177,58 +159,3 @@ stdout and exit with exit code `0`.  Here's an example:
 
 Use stderr for logging.
 
-
-## Development ##
-
-Run your script with the credential wrapper:
-
-    banka run <BANK DOMAIN>/list-accounts
-
-If you are working out of the Git repo, without having installed the package,
-you may need to do this instead:
-
-    PYTHONPATH=. bin/banka run <BANK DOMAIN>/list-accounts
-
-You may also find it helpful to store sensitive data to a local, encrypted
-database during development.  See the `--store` option for more information:
-
-    banka run --help
-
-
-## Asking for credentials ##
-
-Your script should prompt for credentials.  If you are writing a Python script,
-prompt for credentials using `banka.prompt.prompt` like this:
-
-    from banka.prompt import prompt
-    username = prompt('_login')
-    password_or_pin = prompt('password')
-
-**All scripts must** prompt for the specially named `_login` credential
-**first.**
-
-
-## Saving state between runs ##
-
-Your script may need to save state between each run (for instance, cookies
-gathered during screen scraping).  Your script may ask for saved state using
-`banka.prompt.prompt` as in [Asking for credentials](#asking-for-credentials):
-
-    from banka.prompt import prompt
-    state = prompt('_state', ask_human=False)
-
-The script requests the parent to save the state with `banka.prompt.save`
-like this:
-
-    from banka.prompt import save
-    save('_state', "some string of data that should be saved")
-
-
-## Asking for account `id` ##
-
-To fulfill [SimpleFIN's account id](http://simplefin.org/protocol.html#account.id)
-requirement, ask for an alias instead of using the bank-provided id, like this:
-
-    from banka.prompt import alias
-    account1_alias = alias('account 1')
-    account2_alias = alias('account 2')

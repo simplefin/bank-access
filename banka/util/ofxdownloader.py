@@ -135,7 +135,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     kvstore_url = os.environ['DATASTORE_URL']
-    data = yaml.load(open(args.info_yml, 'rb'))
+    data = yaml.load(open(args.info_file, 'rb'))
     ofx = data['ofx']
     trans = listTransactions(kvstore_url, args.days,
         str(ofx['id']), ofx['org'], ofx['url'], str(ofx.get('version', '102')))
