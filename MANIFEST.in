@@ -1,9 +1,0 @@
-include README.md
-include LICENSE
-include CONTRIBUTING.md
-include AUTHORS
-include .coveragerc
-include requirements.txt
-include sitecustomize.py
-include test-requirements.txt
-recursive-include banka/inst *

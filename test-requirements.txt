@@ -1,5 +1,4 @@
-coverage==3.7
-pep8==1.4.6
-pyflakes==0.7.3
-mock==1.0.1
--r requirements.txt
+# Copyright (c) The SimpleFIN Team
+# See LICENSE for details.
+
+PyYAML==3.11

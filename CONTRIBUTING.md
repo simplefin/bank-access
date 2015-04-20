@@ -15,3 +15,5 @@ See LICENSE for details.
     See LICENSE for details.
 
 3. (Optionally) add your name to `AUTHORS`
+
+4. Read README.md and peruse `banka/inst/` for examples of scripts.

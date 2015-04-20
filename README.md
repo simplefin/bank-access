@@ -2,12 +2,29 @@
 Copyright (c) The SimpleFIN Team
 See LICENSE for details.
 -->
+
 [![Build Status](https://travis-ci.org/simplefin/bank-access.png?branch=master)](https://travis-ci.org/simplefin/bank-access)
 
+# THE Goal #
+
+THE Goal of this project is self-destruction.  We would like to live in a world where this project doesn't need to exist.  But until the banks of the world implement a secure, standardized way to access financial data, a project such as this must exist to fill that gap.
+
+Banks implementing [SimpleFIN](http://simplefin.org) is one way to achieve this goal.  But any secure, standardized method would suffice.
+
+Tell your bank you want SimpleFIN!
+
+And please contribute a script for your bank!
+
+
+# Thanks #
+
+Huge thank you to captin411 and this project https://github.com/captin411/ofxclient which makes it easy to connect to most banks.
+
+
+# What's in here? #
+
 This repository contains a collection of scripts can be used to
-programmatically get bank transaction information.  The scripts herein only
-read data and do not change the financial state of a bank (such as doing a
-transfer).
+programmatically get bank transaction information.  The scripts herein only read data and do not change the financial state of a bank (such as doing a transfer).
 
 In this document, the following terms are used interchangeably:
 
@@ -17,51 +34,16 @@ In this document, the following terms are used interchangeably:
 
 
 
-# Goal #
+# How it works #
 
-We want the banks to implement [SimpleFIN](http://simplefin.org),
-so eventually we won't need this repository.  These scripts exist as a bridge
-from banks which don't implement SimpleFIN to tools which expect SimpleFIN.  
-
-Tell your bank you want SimpleFIN!
-
-And please contribute a script for your bank!
+Each bank access script expects to have a secure key value store available to it as an HTTP server.  The (siloscript)[https://github.com/simplefin/siloscript] project provides such a server.
 
 
+## Docker Quickstart ##
 
-# Installation #
+If you have docker installed, do this:
 
-Install directly from Github:
-
-    pip install -e git+https://github.com/simplefin/bank-access.git@master#egg=banka
-
-Or clone this repo then:
-
-    pip install -r requirements.txt
-    python setup.py install
-
-
-# How to use this repo #
-
-Check if your bank is supported either by looking in the
-[`banka/inst` directory](banka/inst/) or by installing the package (as above)
-and running:
-
-    banka list
-
-
-
-## If your bank is listed ##
-
-If your bank is listed, then get your transaction data like this:
-
-    banka run <BANK DOMAIN>/list-accounts
-
-which will prompt you for your credentials and write a JSON string to stdout.
-For more options,
-run with `--help`:
-
-    banka run --help
+    docker run -it simplefin/banka siloscript run banka/inst/chase.com/list-accounts
 
 
 ## If your bank isn't listed ##
@@ -90,11 +72,7 @@ The `info.yml` file should have at least the following information:
     maintainers:
       - joe (joe@example.com)
 
-`maintainers` is a list of people who are willing to maintain the scripts
-within the directory (i.e. test the scripts when the underlying library
-changes or fix them when the bank breaks them).  Include as much contact
-information as you feel comfortable sharing.  A URL to your Github profile
-would be fine.
+`maintainers` is a list of people who are willing to maintain the scripts within the directory (i.e. test the scripts when the underlying library changes or fix them when the bank breaks them).  Include as much contact information as you feel comfortable sharing.  A URL to your Github profile would be fine.
 
 The file may also contain other information as needed.
 
@@ -102,8 +80,16 @@ The file may also contain other information as needed.
 
 # Writing a Script #
 
-How you write the script depends on what the bank provides.  In order of
-preference, try the following when writing a script:
+## Environment ##
+
+The scripts can expect to be called with the following environment variables:
+
+- `DATASTORE_URL` is a URL of a key-value store.  Use this to ask for and save credentials and any state that ought to be maintained between invocations (such as cookies).  The URL will scoped to a specific user, so you can use generic keys like `"account_id"` rather than `"user55/account_id"`.
+
+
+## Good ideas ##
+
+How you write the script depends on what the bank provides.  In order of preference, try the following when writing a script:
 
 1. OFX Server
 
@@ -173,58 +159,3 @@ stdout and exit with exit code `0`.  Here's an example:
 
 Use stderr for logging.
 
-
-## Development ##
-
-Run your script with the credential wrapper:
-
-    banka run <BANK DOMAIN>/list-accounts
-
-If you are working out of the Git repo, without having installed the package,
-you may need to do this instead:
-
-    PYTHONPATH=. bin/banka run <BANK DOMAIN>/list-accounts
-
-You may also find it helpful to store sensitive data to a local, encrypted
-database during development.  See the `--store` option for more information:
-
-    banka run --help
-
-
-## Asking for credentials ##
-
-Your script should prompt for credentials.  If you are writing a Python script,
-prompt for credentials using `banka.prompt.prompt` like this:
-
-    from banka.prompt import prompt
-    username = prompt('_login')
-    password_or_pin = prompt('password')
-
-**All scripts must** prompt for the specially named `_login` credential
-**first.**
-
-
-## Saving state between runs ##
-
-Your script may need to save state between each run (for instance, cookies
-gathered during screen scraping).  Your script may ask for saved state using
-`banka.prompt.prompt` as in [Asking for credentials](#asking-for-credentials):
-
-    from banka.prompt import prompt
-    state = prompt('_state', ask_human=False)
-
-The script requests the parent to save the state with `banka.prompt.save`
-like this:
-
-    from banka.prompt import save
-    save('_state', "some string of data that should be saved")
-
-
-## Asking for account `id` ##
-
-To fulfill [SimpleFIN's account id](http://simplefin.org/protocol.html#account.id)
-requirement, ask for an alias instead of using the bank-provided id, like this:
-
-    from banka.prompt import alias
-    account1_alias = alias('account 1')
-    account2_alias = alias('account 2')

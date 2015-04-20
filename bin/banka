@@ -1,5 +1,0 @@
-#!/usr/bin/env python
-# Copyright (c) The SimpleFIN Team
-# See LICENSE for details.
-from banka.cli import main
-main()
