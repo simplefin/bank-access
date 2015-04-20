@@ -96,7 +96,7 @@ def getID(url, value):
     return r.text
 
 
-def listTransactions(kvstore_url, days, fi_id, fi_org, url, ofx_version):
+def listTransactions(kvstore_url, days, fi_id, fi_org, url, ofx_version, domain):
     """
     Get SimpleFIN-style list of accounts and transactions.
     """
@@ -115,6 +115,7 @@ def listTransactions(kvstore_url, days, fi_id, fi_org, url, ofx_version):
         })
     accounts = inst.accounts()
     return ofxToDict(accounts, days=days,
+        domain=domain,
         id_getter=partial(getID, kvstore_url))
 
 
@@ -137,6 +138,12 @@ if __name__ == '__main__':
     kvstore_url = os.environ['DATASTORE_URL']
     data = yaml.load(open(args.info_file, 'rb'))
     ofx = data['ofx']
-    trans = listTransactions(kvstore_url, args.days,
-        str(ofx['id']), ofx['org'], ofx['url'], str(ofx.get('version', '102')))
+    trans = listTransactions(
+        kvstore_url=kvstore_url,
+        days=args.days,
+        fi_id=str(ofx['id']),
+        fi_org=ofx['org'],
+        url=ofx['url'],
+        ofx_version=str(ofx.get('version', '102')),
+        domain=data['domain'])
     print toJson(trans)
