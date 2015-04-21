@@ -1,84 +1,172 @@
 #!/usr/bin/env python
 # Copyright (c) The SimpleFIN Team
 # See LICENSE for details.
-from banka.args import listAccountsParser
-from banka.prompt import prompt
-import sys
+import requests
 import os
-import mechanize
-import cookielib
-from bs4 import BeautifulSoup as BS
+import json
+from datetime import date, timedelta
+import argparse
 
 
-def debug(msg):
-    sys.stderr.write('%s\n' % (msg,))
-    sys.stderr.flush()
+def getValue(url, key, prompt=None):
+    """
+    Get a value from the key-value store.
+    """
+    params = None
+    if prompt:
+        params = {'prompt': prompt}
+    r = requests.get('%s/%s' % (url, key), params=params)
+    if not r.ok:
+        raise Exception("Request for %r failed: %r" % (key, r.text))
+    return r.text
 
 
-def login(browser):
-    username = prompt('username')
-    #password = prompt('password')
-    
-    # username
-    browser.open('https://secure.ally.com/allyWebClient/login.do')
-    debug(browser.title())
-
-    browser.select_form(name='actionForm')
-    browser["userNamePvtEncrypt"] = username
-    browser.submit()
-
-    # Is it the Additional Verification Needed page?
-    debug(browser.title())
-    if browser.title().lower().count('additional verification'):
-        getThroughAdditionalVerificationNeeded(browser)
+def getID(url, value):
+    """
+    Exchange a sensitive value for a consistent, benign one.
+    """
+    r = requests.post(url, {
+        'value': value,
+    })
+    if not r.ok:
+        raise Exception("Request to exchange id failed: %r" % (r.text,))
+    return r.text
 
 
-def getThroughAdditionalVerificationNeeded(browser):
-    for form in browser.forms():
-        debug(form)
-        debug('Additional verification needed')
-        debug(dir(form))
-        debug(form["selectedOtpMethodType"])
-        debug(dir(form["selectedOtpMethodType"]))
-        debug(form.controls)
-        radio = form.find_control(name="selectedOtpMethodType")
-        soup = BS(browser.response().get_data())
-        print soup.prettify()
+def pr(response):
+    """
+    Print the response
+    """
+    print ''
+    print response, response.request.url
+    for k,v in response.headers.items():
+        print '  %s: %r' % (k, v)
+    for k,v in response.cookies.items():
+        print '  %s: %r' % (k, v)
 
-        print dir(radio)
-        print radio.possible_items()
-        print radio.pairs()
-        print radio.get_labels()
-        print radio.get_items()
-    
-    
+def getTransactions(args):
+    kvurl = os.environ['DATASTORE_URL']
 
+    username = getValue(kvurl, 'account_id', 'Account ID?')
+    password = getValue(kvurl, 'password', 'Password?')
+    today = date.today()
+    fromDate = today - timedelta(days=args.days)
+    toDate = today + timedelta(days=1)
 
-def getBrowser():
-    browser = mechanize.Browser()
-    cookie_jar = cookielib.LWPCookieJar()
-    browser.set_cookiejar(cookie_jar)
-    browser.set_handle_equiv(True)
-    browser.set_handle_gzip(True)
-    browser.set_handle_redirect(True)
-    browser.set_handle_referer(True)
-    browser.set_handle_robots(False)
-    browser.set_handle_refresh(mechanize._http.HTTPRefreshProcessor(), max_time=1)
+    s = requests.session()
+    r = s.get('https://securebanking.ally.com')
+    # pr(r)
 
-    browser.addheaders = [('User-agent',
-        'Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.0.1) Gecko/2008071615 Fedora/3.0.1-1.fc9 Firefox/3.0.1')]
-    return browser
+    # Get a CSRFChallengeToken
+    r = s.post('https://securebanking.ally.com/IDPProxy/userstatusenquiry/olbWeb')
+    # pr(r)
+    CSRFChallengeToken = r.headers['CSRFChallengeToken']
 
+    # Log in
+    r = s.post('https://securebanking.ally.com/IDPProxy/executor/session', {
+        'userNamePvtEncrypt': username,
+        'passwordPvtBlock': password,
+        'rememberMeFlag': 'false',
+        'channelType': 'OLB',
+        'deviceTokenFso': '',
+    }, headers={
+        'CSRFChallengeToken': CSRFChallengeToken,
+        'patron-id': 'olbWeb',
+        'ApplicationId': 'ALLYUSBOLB',
+        'ApplicationVersion': '1.0',
+        'ApplicationName': 'AOB',
+    })
+    # pr(r)
 
-def main(args):
-    parser = listAccountsParser()
-    args = parser.parse_args(args)
-    start_date = args.start_date
-    end_date = args.end_date
+    r = s.get('https://securebanking.ally.com/IDPProxy/executor/session/consents',
+        headers={
+            'CSRFChallengeToken': CSRFChallengeToken,
+            'patron-id': 'olbWeb',
+        })
+    # pr(r)
 
-    browser = getBrowser()
-    login(browser)
+    # Get account url
+    r = s.get('https://securebanking.ally.com/IDPProxy/executor/accounts', headers={
+        'CSRFChallengeToken': CSRFChallengeToken,
+        'patron-id': 'olbWeb',
+        'Accept': 'application/json, text/javascript, */*; q=0.01',
+    })
+    # pr(r)
+    # print r.text
+
+    accounts = json.loads(r.text)
+    internal_accounts = [x for x in accounts['accountSummary'] if not x['externalAccountIndicator']]
+
+    ret = {
+        'accounts': [],
+    }
+    for account in internal_accounts:
+        benign_id = getID(kvurl, account['accountNumberPvtEncrypt'])
+        a = {
+            'org': {
+                'domain': 'ally.com',
+                'sfin-url': None,
+            },
+            'id': benign_id,
+            'name': account['accountNickname'],
+            'currency': 'USD',
+            # the balance is set below in case you're looking at a date range
+            # far in the past.  This number should be the balance at the end
+            # of the latest *listed* transaction, not the current balance.
+            'balance': None,
+            'available-balance': str(account['availableBalancePvtEncrypt']),
+            'balance-as-of': None,
+            'transactions': [
+            ],
+        }
+        dl_url = 'https://securebanking.ally.com/IDPProxy/executor/accounts/%(account_id)s/transactions?patron-id=olbWeb&fromDate=%(fromdate)s&toDate=%(todate)s&status=Posted'
+        dl = dl_url % {
+            'account_id': account['accountId'],
+            'fromdate': fromDate.strftime('%Y-%m-%d'),
+            'todate': toDate.strftime('%Y-%m-%d'),
+        }
+        r = s.get(dl, headers={
+            'CSRFChallengeToken': CSRFChallengeToken,
+            'patron-id': 'olbWeb',
+            'Accept': 'application/json, text/javascript, */*; q=0.01',
+        })
+        #pr(r)
+
+        data = json.loads(r.text)
+        #print json.dumps(data, indent=2)
+        balance_as_of = None
+        for transaction in data['transaction']:
+            t = {
+                'id': transaction['transactionId'],
+                'posted': transaction['transactionPostingDate'],
+                'amount': str(transaction['transactionAmountPvtEncrypt']),
+                'description': str(transaction['transactionDescription']),
+            }
+            a['transactions'].append(t)
+
+            if balance_as_of:
+                if transaction['transactionPostingDate'] > balance_as_of:
+                    balance_as_of = transaction['transactionPostingDate']
+                    a['balance'] = transaction['transactionBalancePvtEncrypt']
+            else:
+                balance_as_of = transaction['transactionPostingDate']
+        a['balance-as-of'] = balance_as_of
+        if not a['balance']:
+            a['balance'] = str(account['currentBalancePvtEncrypt'])
+        ret['accounts'].append(a)
+
+    return ret
+
 
 
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--verbose', '-v',
+        action="store_true",
+        help='Display debugging information')
+    parser.add_argument('days',
+        type=int,
+        help='Days back of transactions to get')
+    args = parser.parse_args()
+    d = getTransactions(args)
+    print json.dumps(d, indent=2)
