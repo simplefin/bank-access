@@ -22,11 +22,19 @@ WORKDIR /work
 COPY requirements.txt /work/requirements.txt
 RUN pip install -r /work/requirements.txt
 
+#------------------------------------------------------------------------------
+# make some encryption keys
+#------------------------------------------------------------------------------
+ENV USERNAME banka
+COPY util/genkey.py util/genkey.py
+RUN python util/genkey.py .gpghome
+
+
 COPY . /work
+
 
 EXPOSE 80
 
-RUN apt-get clean
-RUN rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+WORKDIR /work
 
 CMD ["/usr/local/bin/siloscript", "--help"]

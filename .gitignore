@@ -7,4 +7,5 @@ htmlcov/
 dist/
 MANIFEST
 banka.egg-info/
+*~
 .gpghome

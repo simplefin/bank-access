@@ -100,10 +100,9 @@ def listTransactions(kvstore_url, days, fi_id, fi_org, url, ofx_version, domain)
     """
     Get SimpleFIN-style list of accounts and transactions.
     """
-    username = requests.get(kvstore_url + '/username',
-        params={'prompt': 'Account/Username?'}).text
-    password = requests.get(kvstore_url + '/password',
-        params={'prompt': 'Password/PIN?'}).text
+    username = getValue(kvstore_url, 'username', 'Account/Username?')
+    password = getValue(kvstore_url, 'password', 'Password/PIN?')
+
     inst = Institution(
         id=fi_id,
         org=fi_org,
