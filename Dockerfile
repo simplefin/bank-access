@@ -22,15 +22,12 @@ WORKDIR /work
 COPY requirements.txt /work/requirements.txt
 RUN pip install -r /work/requirements.txt
 
-#------------------------------------------------------------------------------
-# make some encryption keys
-#------------------------------------------------------------------------------
-ENV USERNAME banka
-COPY util/genkey.py util/genkey.py
-RUN python util/genkey.py .gpghome
-
-
 COPY . /work
+
+#------------------------------------------------------------------------------
+# Use INSECURE, shared, globally available key
+#------------------------------------------------------------------------------
+RUN mv util/samplekeys .gpghome
 
 
 EXPOSE 80
