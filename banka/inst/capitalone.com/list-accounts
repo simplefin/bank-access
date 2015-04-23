@@ -1,3 +1,16 @@
-#!/bin/bash
+#!/usr/bin/env python
 # Copyright (c) The SimpleFIN Team
 # See LICENSE for details.
+import requests
+import os
+import json
+import argparse
+
+def getTransactions(args):
+    kvurl = os.environ['DATASTORE_URL']
+
+    username = getValue(kvurl, 'username', 'Username?')
+    password = getValue(kvurl, 'password', 'Password?')
+
+    s = requests.session()
+    r = s.get('https://www.capitalone.com/sign-in/?audienceType=MTS%3A%3AKV0LVIE8Z&Log=1&EventType=Link&ComponentType=T&LOB=MTS%3A%3AL0RT6ME8Z&PageName=Home+Page+C&ComponentName=primary_nav&ContentElement=XX-7%3BSign+In&TargetPageName=Online+Banking+Accounts+Login')
