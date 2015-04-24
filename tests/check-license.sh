@@ -12,6 +12,7 @@ MISSING=$(grep -Lr \
     --exclude='requirements.txt' \
     --exclude=LICENSE \
     --exclude='*.sublime-*' \
+    --exclude-dir='util/samplekeys' \
     "Copyright (c) The SimpleFIN Team" \
     *)
 

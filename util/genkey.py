@@ -1,4 +1,7 @@
 #!/usr/bin/env python
+# Copyright (c) The SimpleFIN Team
+# See LICENSE for details.
+
 import sys
 import gnupg
 from twisted.internet import task
