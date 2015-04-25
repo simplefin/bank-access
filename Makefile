@@ -18,5 +18,3 @@ test-info-yml:
 
 simplefin/banka:
 	docker build -t simplefin/banka .
-	ID=$$(docker run -d simplefin/banka /bin/bash) && \
-		docker export $$ID | docker import - simplefin/banka
