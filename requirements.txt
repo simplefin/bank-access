@@ -11,3 +11,5 @@ PyYAML==3.11
 # unpackaged
 git+git://github.com/simplefin/siloscript.git@master
 
+splinter==0.7.2
+selenium==2.45.0

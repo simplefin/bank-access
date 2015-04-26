@@ -1,0 +1,105 @@
+#!/usr/bin/env python
+from siloscript import getValue
+from functools import partial
+from splinter import Browser
+from datetime import date, timedelta
+from urlparse import urljoin
+import requests
+
+days = 10
+enddate = date.today()
+startdate = enddate - timedelta(days=days)
+
+print startdate, enddate
+
+username = getValue('username', prompt='Username?')
+password = getValue('password', prompt='Password?')
+
+i = 0
+def shot(browser, name=''):
+    global i
+    name = name or 'def'
+    i += 1
+    browser.driver.save_screenshot('/tmp/images/%d-%s.png' % (i, name))
+
+
+with Browser() as browser:
+    shot = partial(shot, browser)
+
+    # sign in
+    browser.visit('https://servicing.capitalone.com/c1/Login.aspx')
+    browser.is_element_present_by_id('loginframe', wait_time=10)
+    with browser.get_iframe(1) as iframe:
+        iframe.is_element_present_by_id('uname', wait_time=10)
+        iframe.fill('username', username)
+        iframe.fill('password', password)
+        iframe.find_by_id('cofisso_btn_login').click()
+    shot('afterfill')
+    browser.is_element_present_by_id('transactionsLink0', wait_time=10)
+
+    # click through to download page
+    shot('in')
+    browser.click_link_by_text('Transactions')
+
+    if not browser.is_text_present('Download Transactions', wait_time=10):
+        shot('no download')
+        print browser.html
+        raise Exception('no download link')
+    print 'download link present'
+    shot('clicktrans')
+    browser.click_link_by_text('Download Transactions')
+
+    if not browser.is_element_present_by_name('txtFromDate$TextBox', wait_time=10):
+        shot('noinput')
+        raise Exception('no input for date')
+    print 'input for date'
+    browser.fill('txtFromDate$TextBox', startdate.strftime('%m/%d/%y'))
+    browser.fill('txtToDate$TextBox', enddate.strftime('%m/%d/%y'))
+    browser.find_by_value('OFX').click()
+    shot('beforedownload')
+
+    input_names = [
+        '__EVENTTARGET',
+        '__EVENTARGUMENT',
+        '__LASTFOCUS',
+        'DES_Group',
+        '__VIEWSTATE',
+        'DES_JSE',
+        '__VIEWSTATEGENERATOR',
+        '__EVENTVALIDATION',
+        # no needed?
+        'FAVORITESDROPDOWN',
+        'hidChatVars',
+        'hfStartDateLabel',
+        'hfEndDateLabel',
+
+        # account select
+        'cboAccountTypeList',
+
+        # custom
+        'txtFromDate$TextBox',
+        'txtToDate$TextBox',
+        #'ctlStatementFilter',
+    ]
+    data = {
+        'btnDownload.x': '46',
+        'btnDownload.y': '12',
+        'ctlStatementFilter': 'OFX',
+    }
+    download_url = urljoin(browser.url, 'Download.aspx?index=1')
+
+    for input_name in input_names:
+        data[input_name] = browser.find_by_name(input_name).first.value
+    print 'data', data
+    cookies = browser.cookies.all()
+    print 'cookies', cookies
+    
+    r = requests.post(download_url, data=data, cookies=cookies,
+        headers={'Referer': browser.url})
+    print r, r.url, r.request
+    if r.ok:
+        #open('/tmp/output.html', 'wb').write(r.text)
+        print repr(r.text)
+    else:
+        print 'Failure', r.text
+    #browser.find_by_id('btnDownload').click()
