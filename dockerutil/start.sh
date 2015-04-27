@@ -1,3 +1,5 @@
+# Copyright (c) The SimpleFIN Team
+# See LICENSE for details.
 set -e
 export DISPLAY=:99
 mkdir ~/.vnc

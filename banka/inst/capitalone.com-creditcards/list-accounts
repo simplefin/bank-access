@@ -1,4 +1,7 @@
 #!/usr/bin/env python
+# Copyright (c) The SimpleFIN Team
+# See LICENSE for details.
+
 from siloscript import getValue, getToken
 from functools import partial
 from splinter import Browser
