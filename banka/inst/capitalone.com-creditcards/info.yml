@@ -4,5 +4,7 @@
 ---
 name: Capital One
 domain: capitalone.com
+products:
+  - creditcards
 maintainers:
   - github.com/iffy
