@@ -8,13 +8,7 @@ from StringIO import StringIO
 from parsefin import parseFile
 import requests
 import json
-
-days = 10
-enddate = date.today()
-startdate = enddate - timedelta(days=days)
-
-username = getValue('username', prompt='Username?')
-password = getValue('password', prompt='Password?')
+import argparse
 
 i = 0
 def screenshot(browser, name=''):
@@ -24,9 +18,11 @@ def screenshot(browser, name=''):
     browser.driver.save_screenshot('/tmp/images/%d-%s.png' % (i, name))
 
 
-def getOFX(username, password):
+def getOFX(username, password, startdate, enddate, verbose=False):
     with Browser() as browser:
         shot = partial(screenshot, browser)
+        if not verbose:
+            shot = lambda *a,**kw:None
 
         # sign in
         browser.visit('https://servicing.capitalone.com/c1/Login.aspx')
@@ -45,7 +41,6 @@ def getOFX(username, password):
 
         if not browser.is_text_present('Download Transactions', wait_time=10):
             shot('no download')
-            print browser.html
             raise Exception('no download link')
         shot('clicktrans')
         browser.click_link_by_text('Download Transactions')
@@ -102,9 +97,14 @@ def getOFX(username, password):
         raise Exception('Failed on the last part')
 
 
-def getTransactions():
+def getTransactions(args):
+    enddate = date.today()
+    startdate = enddate - timedelta(days=args.days)
+    username = getValue('username', prompt='Username?')
+    password = getValue('password', prompt='Password?')
+
     domain = 'capitalone.com'
-    ofx = getOFX(username, password)
+    ofx = getOFX(username, password, startdate, enddate)
     parsed = parseFile(StringIO(ofx))
     ret = {
         'accounts': []
@@ -133,9 +133,20 @@ def getTransactions():
             a['transactions'].append(t)
         ret['accounts'].append(a)
 
-    print json.dumps(ret, indent=2)
+    return ret
 
 
 if __name__ == '__main__':
-    getTransactions()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--verbose', '-v',
+        action="store_true",
+        help='Display debugging information')
+    parser.add_argument('days',
+        type=int,
+        default=10,
+        help='Days back of transactions to get (default %(default)s)')
+    args = parser.parse_args()
+
+    ret = getTransactions(args)
+    print json.dumps(ret, indent=2)
 
