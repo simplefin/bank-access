@@ -12,7 +12,10 @@ RUN apt-get install -y python-pip
 RUN apt-get install -y git
 RUN apt-get install -y libsqlite3-dev
 RUN apt-get install -y curl
-RUN apt-get install -y python-lxml
+
+# for lxml
+RUN apt-get install -y libz-dev libxml2-dev libxslt1-dev
+
 RUN pip install -U pip
 
 #------------------------------------------------------------------------------
