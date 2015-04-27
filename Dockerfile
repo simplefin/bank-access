@@ -27,12 +27,19 @@ RUN apt-get install -y xfonts-100dpi \
 #------------------------------------------------------------------------------
 # python deps
 #------------------------------------------------------------------------------
+WORKDIR /work
 COPY requirements.txt /work/requirements.txt
 RUN pip install -r /work/requirements.txt
 
 
 COPY . /work
 ADD dockerutil/start.sh /home/root/start.sh
+
+#------------------------------------------------------------------------------
+# Use INSECURE, shared, globally available key
+#------------------------------------------------------------------------------
+RUN mv util/samplekeys .gpghome
+
 
 EXPOSE 80
 

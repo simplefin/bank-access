@@ -1,8 +1,15 @@
 # Copyright (c) The SimpleFIN Team
 # See LICENSE for details.
 
-.phony: test test-copyright test-info-yml simplefin/banka
+.phony: test test-copyright test-info-yml simplefin/banka clean
 
+clean:
+	-rm -r .gpghome
+	-rm *.sqlite
+
+
+.gpghome:
+	python util/genkey.py .gpghome
 
 test:
 	$(MAKE) test-copyright
@@ -16,5 +23,5 @@ test-info-yml:
 	@bash tests/assertminimuminfo.sh banka/inst
 
 
-simplefin/banka:
+simplefin/banka: .gpghome
 	docker build -t simplefin/banka .
