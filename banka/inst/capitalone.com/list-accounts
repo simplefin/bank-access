@@ -1,179 +1,139 @@
 #!/usr/bin/env python
-# Copyright (c) The SimpleFIN Team
-# See LICENSE for details.
+from siloscript import getValue, getToken
+from functools import partial
+from splinter import Browser
+from datetime import date, timedelta
+from urlparse import urljoin
+from StringIO import StringIO
+from parsefin import parseFile
 import requests
-import sys
 import json
 import argparse
-import re
-import time
 
-from siloscript import getValue
-
-
-def pr(response):
-    """
-    Print the response
-    """
-    sys.stderr.write('\n')
-    sys.stderr.write('%s %s\n' % (response, response.request.url))
-    for k,v in response.headers.items():
-        sys.stderr.write('  %s: %r\n' % (k, v))
-    for k,v in response.cookies.items():
-        sys.stderr.write('  %s: %r\n' % (k, v))
+i = 0
+def screenshot(browser, name=''):
+    global i
+    name = name or 'def'
+    i += 1
+    browser.driver.save_screenshot('/tmp/images/%d-%s.png' % (i, name))
 
 
-def log(x):
-    if isinstance(x, unicode):
-        x = x.encode('utf-8')
-    sys.stderr.write('%s\n' % (x,))
+def getOFX(username, password, startdate, enddate, verbose=False):
+    with Browser() as browser:
+        shot = partial(screenshot, browser)
+        if not verbose:
+            shot = lambda *a,**kw:None
 
+        # sign in
+        browser.visit('https://servicing.capitalone.com/c1/Login.aspx')
+        browser.is_element_present_by_id('loginframe', wait_time=10)
+        with browser.get_iframe(1) as iframe:
+            iframe.is_element_present_by_id('uname', wait_time=10)
+            iframe.fill('username', username)
+            iframe.fill('password', password)
+            iframe.find_by_id('cofisso_btn_login').click()
+        shot('afterfill')
+        browser.is_element_present_by_id('transactionsLink0', wait_time=10)
 
-def enableLogging():
-    # from http://stackoverflow.com/questions/10588644/how-can-i-see-the-entire-http-request-thats-being-sent-by-my-python-application
-    import logging
+        # click through to download page
+        shot('in')
+        browser.click_link_by_text('Transactions')
 
-    # These two lines enable debugging at httplib level (requests->urllib3->http.client)
-    # You will see the REQUEST, including HEADERS and DATA, and RESPONSE with HEADERS but without DATA.
-    # The only thing missing will be the response.body which is not logged.
-    try:
-        import http.client as http_client
-    except ImportError:
-        # Python 2
-        import httplib as http_client
-    http_client.HTTPConnection.debuglevel = 1
+        if not browser.is_text_present('Download Transactions', wait_time=10):
+            shot('no download')
+            raise Exception('no download link')
+        shot('clicktrans')
+        browser.click_link_by_text('Download Transactions')
 
-    # You must initialize logging, otherwise you'll not see debug output.
-    logging.basicConfig() 
-    logging.getLogger().setLevel(logging.DEBUG)
-    requests_log = logging.getLogger("requests.packages.urllib3")
-    requests_log.setLevel(logging.DEBUG)
-    requests_log.propagate = True
+        if not browser.is_element_present_by_name('txtFromDate$TextBox', wait_time=10):
+            shot('noinput')
+            raise Exception('no input for date')
+        
+        # compute download url, cookies and form data for requests lib
+        browser.fill('txtFromDate$TextBox', startdate.strftime('%m/%d/%y'))
+        browser.fill('txtToDate$TextBox', enddate.strftime('%m/%d/%y'))
+        browser.find_by_value('OFX').click()
+        shot('beforedownload')
+
+        input_names = [
+            '__EVENTTARGET',
+            '__EVENTARGUMENT',
+            '__LASTFOCUS',
+            'DES_Group',
+            '__VIEWSTATE',
+            'DES_JSE',
+            '__VIEWSTATEGENERATOR',
+            '__EVENTVALIDATION',
+            # no needed?
+            'FAVORITESDROPDOWN',
+            'hidChatVars',
+            'hfStartDateLabel',
+            'hfEndDateLabel',
+
+            # account select
+            'cboAccountTypeList',
+
+            # custom
+            'txtFromDate$TextBox',
+            'txtToDate$TextBox',
+            #'ctlStatementFilter',
+        ]
+        data = {
+            'btnDownload.x': '46',
+            'btnDownload.y': '12',
+            'ctlStatementFilter': 'OFX',
+        }
+        download_url = urljoin(browser.url, 'Download.aspx?index=1')
+
+        for input_name in input_names:
+            data[input_name] = browser.find_by_name(input_name).first.value
+        cookies = browser.cookies.all()
+        
+        r = requests.post(download_url, data=data, cookies=cookies,
+            headers={'Referer': browser.url})
+        if r.ok:
+            return r.text
+        shot('failure')
+        raise Exception('Failed on the last part')
 
 
 def getTransactions(args):
-    username = getValue('username', 'Username?')
-    password = getValue('password', 'Password?')
+    enddate = date.today()
+    startdate = enddate - timedelta(days=args.days)
+    username = getValue('username', prompt='Username?')
+    password = getValue('password', prompt='Password?')
 
-    s = requests.session()
-    s.get('https://login1.capitalone.com/loginweb/login/login.do')
-    r = s.post('https://login1.capitalone.com/loginweb/login/login.do', data={
-        'username': username,
-        'user': username,
-        'password': password,
-    })
-    pr(r)
-    log(r.text)
+    domain = 'capitalone.com'
+    ofx = getOFX(username, password, startdate, enddate)
+    parsed = parseFile(StringIO(ofx))
+    ret = {
+        'accounts': []
+    }
+    for account in parsed['accounts']:
+        a = {
+            'org': {
+                'domain': domain,
+                'sfin-url': None,
+            },
+            'id': getToken(account['account_id']),
+            'name': 'unknown',
+            'currency': account['currency'],
+            'balance': str(account['balance']),
+            'available_balance': 'unknown',
+            'balance-as-of': account['transaction_end'].isoformat(),
+            'transactions': [],
+        }
+        for transaction in account['transactions']:
+            t = {
+                'id': transaction['id'],
+                'posted': transaction['posted'].isoformat(),
+                'amount': transaction['amount'],
+                'description': transaction['memo'] or transaction['name'],
+            }
+            a['transactions'].append(t)
+        ret['accounts'].append(a)
 
-    r = s.get('https://login1.capitalone.com/loginweb/login/loginMFA.do')
-    pr(r)
-    log(r.text)
-
-    r = s.get('https://servicing.capitalone.com/c1/Login.aspx')
-    pr(r)
-    log(r.text)
-
-    r = s.post('https://servicing.capitalone.com/c1/Login.aspx', data={
-        
-    })
-    pr(r)
-    log(r.text)
-
-
-    # s = requests.session()
-    # s.headers.update({'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/42.0.2311.90 Safari/537.36'})
-    # r = s.get('https://www.capitalone.com/')
-    # pr(r)
-
-    # r = s.get('https://login1.capitalone.com/resources/bll/jscript/badge-config-v1.js')
-    # pr(r)
-
-    # # get ip -- I'm not sure if you have to get the ip this way or if you
-    # # could just know your ip and use it.
-    # r = s.get('https://login1.capitalone.com/loginweb/common/Get_Remote_Address.jsp?callback=callback&_=1429908670812')
-    # pr(r)
-    # log(r.text)
-    # r_ip = re.compile(r'callback\({"userIp"\s*:\s*"(.*?)"}\);')
-    # m = r_ip.search(r.text)
-    # ip = m.groups()[0]
-    # log('ip: %r' % (ip,))
-
-    # # https://www.capitalone.com/www-portal/services/xp1Id/set?XP_UID=EN-00000000004116212
-    # # C1_XPUID
-    # # I think this is marketing stuff
-
-
-    # # manually add some cookies
-    # s.cookies['ssotgt'] = 'F2EOS'
-    # #s.cookies['ISSO_CNTRY_CODE'] = 'USA'
-    # s.cookies['wwwLogin'] = 'credit cards'
-
-    # # some trojan data stuff
-    # #s.cookies['ISSO_HI'] = '{"functions":{"names":[],"excluded":{"size":0,"count":0},"truncated":true},"inputs":[],"iframes":[],"scripts":[],"collection_status":2}'
-
-    # # it's called eMFA Trojan Data.... that doesn't sound good, but
-    # # that's what CapitalOne calls it in badge-v1.js
-    # #s.cookies['ISSO_MVM'] = '1,1,INPUT:text,7@1,3,0~1,4,0~1,3,0~1,1,0~1,1,0~1,1,0~1,1,0~1,1,0~1,1,0~1,1,0~1,1,0~1,4,0@0,%d,0' % (int(time.time()) * 1000,)
-
-    # # device finger print
-    # #s.cookies['AA_DFP'] = 'version=3.4.0.0_2&pm_fpua=mozilla/5.0 (macintosh; intel mac os x 10_10_2) applewebkit/537.36 (khtml, like gecko) chrome/42.0.2311.90 safari/537.36|5.0 (Macintosh; Intel Mac OS X 10_10_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/42.0.2311.90 Safari/537.36|MacIntel&pm_fpsc=24|1440|900|877&pm_fpsw=&pm_fptz=-7&pm_fpln=lang=en-US|syslang=|userlang=&pm_fpjv=1&pm_fpco=1&pm_fpasw=widevinecdmadapter|mhjfbmdgcfjbbpaeojofohoefgiehjai|pepperflashplayer|internal-remoting-viewer|internal-nacl-plugin|internal-pdf-viewer&pm_fpan=Netscape&pm_fpacn=Mozilla&pm_fpol=true&pm_fposp=&pm_fpup=&pm_fpsaw=1440&pm_fpspd=24&pm_fpsbd=&pm_fpsdx=&pm_fpsdy=&pm_fpslx=&pm_fpsly=&pm_fpsfse=&pm_fpsui=&pm_os=Mac&pm_brmjv=42&pm_br=Chrome&pm_inpt=&pm_expt='
-
-    # # RSA FSO Impl
-    # #s.cookies['ISSO_RSA_FSO'] = ''
-    # #s.cookies['ISSO_RM'] = 'false'
-
-    # # extra cookie
-    # s.cookies.pop('cookie_wwwwebtoapp1_kdc_capitalone_com')
-
-    # sys.stderr.write('\nCookies:\n')
-    # for k,v in s.cookies.items():
-    #     sys.stderr.write('  %s: %s\n' % (k, v))
-
-    # log('username: %s' % (len(username),))
-    # log('password: %s' % (len(password),))
-    # r = s.post('https://login1.capitalone.com/loginweb/login/login.do', data={
-    #     'user': username,
-    #     'password': password,
-    #     'encode': '?',
-    # }, timeout=3)
-    # pr(r)
-
-    # # https://login1.capitalone.com/loginweb/login/postLogin.do
-
-    # # r = s.get('https://servicing.capitalone.com/c1/Login.aspx')
-    # # pr(r)
-    # # log(r.text)
-
-    # # r = s.post('https://login1.capitalone.com/loginweb/login/login.do', data={
-    # #     'user': username,
-    # #     'username': username,
-    # #     'password': password,
-    # # }, timeout=3)
-    # # pr(r)
-
-    # r = s.get('https://login1.capitalone.com/loginweb/login/loginMFA.do')
-    # pr(r)
-    # log(r.text)
-
-    # #r = s.get('https://login1.capitalone.com/loginweb/login/redirectToSPpage.do')
-    # #pr(r)
-
-
-    # # sys.stderr.write('\nCookies:\n')
-    # # for k,v in s.cookies.items():
-    # #     sys.stderr.write('  %s: %s\n' % (k, v))
-
-    # #r = s.get('https://servicing.capitalone.com/c1/LoginLanding.aspx?startpg=accsumm&setdefaultpg=n&LinkId=ISSO_Z_Z_Z_ISEOSLG_C3_01_G_ACTSR')
-    # #pr(r)
-
-    # assert r.headers['Location'] == 'https://services1.capitalone.com/accounts?initial_login=true', str(r.headers)
-
-    # #r = s.get('https://services1.capitalone.com/accounts?initial_login=true')
-    # #pr(r)
-
-    # #r = s.get('https://services1.capitalone.com/accounts')
-    # #pr(r)
-    # #log(r.text)
+    return ret
 
 
 if __name__ == '__main__':
@@ -183,9 +143,10 @@ if __name__ == '__main__':
         help='Display debugging information')
     parser.add_argument('days',
         type=int,
-        help='Days back of transactions to get')
+        default=10,
+        help='Days back of transactions to get (default %(default)s)')
     args = parser.parse_args()
-    if args.verbose:
-        enableLogging()
-    d = getTransactions(args)
-    print json.dumps(d, indent=2)
+
+    ret = getTransactions(args)
+    print json.dumps(ret, indent=2)
+

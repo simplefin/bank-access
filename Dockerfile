@@ -25,25 +25,6 @@ RUN apt-get install -y xfonts-100dpi \
   xfonts-cyrillic
 
 #------------------------------------------------------------------------------
-# nodejs
-#------------------------------------------------------------------------------
-WORKDIR /tmp/node
-RUN curl -o node.tar.gz http://nodejs.org/dist/v0.12.2/node-v0.12.2.tar.gz && \
-    ls && \
-    tar xf node.tar.gz && \
-    cd node-* && \
-    ./configure && make && make install && \
-    cd /tmp && rm -rf /tmp/node
-
-
-#------------------------------------------------------------------------------
-# nodejs deps
-#------------------------------------------------------------------------------
-WORKDIR /work
-COPY package.json /work/package.json
-RUN npm install
-
-#------------------------------------------------------------------------------
 # python deps
 #------------------------------------------------------------------------------
 COPY requirements.txt /work/requirements.txt
@@ -52,8 +33,6 @@ RUN pip install -r /work/requirements.txt
 
 COPY . /work
 ADD dockerutil/start.sh /home/root/start.sh
-
-ENV PATH=$PATH:/work/node_modules/.bin
 
 EXPOSE 80
 
