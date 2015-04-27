@@ -9,3 +9,4 @@ MANIFEST
 banka.egg-info/
 *~
 .gpghome
+node_modules

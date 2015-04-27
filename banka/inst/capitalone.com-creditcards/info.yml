@@ -1,0 +1,10 @@
+# Copyright (c) The SimpleFIN Team
+# See LICENSE for details.
+
+---
+name: Capital One
+domain: capitalone.com
+products:
+  - creditcards
+maintainers:
+  - github.com/iffy

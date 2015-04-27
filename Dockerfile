@@ -12,8 +12,17 @@ RUN apt-get install -y python-pip
 RUN apt-get install -y git
 RUN apt-get install -y libsqlite3-dev
 RUN apt-get install -y curl
-
+RUN apt-get install -y python-lxml
 RUN pip install -U pip
+
+#------------------------------------------------------------------------------
+# firefox and vnc
+#------------------------------------------------------------------------------
+RUN apt-get update && apt-get install -y x11vnc xvfb firefox
+RUN apt-get install -y xfonts-100dpi \
+  xfonts-75dpi \
+  xfonts-scalable \
+  xfonts-cyrillic
 
 #------------------------------------------------------------------------------
 # python deps
@@ -22,7 +31,9 @@ WORKDIR /work
 COPY requirements.txt /work/requirements.txt
 RUN pip install -r /work/requirements.txt
 
+
 COPY . /work
+ADD dockerutil/start.sh /home/root/start.sh
 
 #------------------------------------------------------------------------------
 # Use INSECURE, shared, globally available key
@@ -32,6 +43,4 @@ RUN mv util/samplekeys .gpghome
 
 EXPOSE 80
 
-WORKDIR /work
-
-CMD ["/usr/local/bin/siloscript", "--help"]
+ENTRYPOINT ["sh", "/home/root/start.sh"]
