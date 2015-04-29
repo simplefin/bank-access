@@ -2,16 +2,16 @@
 # Copyright (c) The SimpleFIN Team
 # See LICENSE for details.
 
-from siloscript import getValue, getToken, putValue
+from siloscript import getValue, getToken
+#from siloscript import putValue
 from functools import partial
 from splinter import Browser
 from datetime import date, timedelta
-from urlparse import urljoin
-from StringIO import StringIO
 from parsefin import parseFile
-import requests
 import json
 import argparse
+import tempfile
+import os
 
 i = 0
 def screenshot(browser, name=''):
@@ -42,17 +42,24 @@ def strip_tags(html):
 
 
 def getOFX(username, password, startdate, enddate, verbose=False):
-    with Browser() as browser:
+    download_dir = tempfile.mkdtemp()
+    preferences = {
+        'browser.download.folderList': 2, 
+        'browser.download.manager.showWhenStarting': False,
+        'browser.download.dir': download_dir,
+        'browser.helperApps.neverAsk.saveToDisk': 'application/x-ofx', 
+    }
+    with Browser('firefox', profile_preferences=preferences) as browser:
         shot = partial(screenshot, browser)
         if not verbose:
             shot = lambda *a,**kw:None
 
         # load cookies from before, if possible
-        try:
-            last_cookies = getValue('cookies')
-            print 'got cookies: %r' % (last_cookies,)
-        except:
-            print 'no cookies'
+        # try:
+        #     last_cookies = getValue('cookies')
+        #     print 'got cookies: %r' % (last_cookies,)
+        # except:
+        #     print 'no cookies'
 
         #----------------------------------------------------------------------
         # home page
@@ -99,7 +106,6 @@ def getOFX(username, password, startdate, enddate, verbose=False):
                     save=False,
                     options=options)
                 delivery_method = opt_dict[response]
-                print 'chosen delivery method', delivery_method
 
                 browser.find_by_id(delivery_method).first.click()
                 shot('chosen')
@@ -132,11 +138,10 @@ def getOFX(username, password, startdate, enddate, verbose=False):
         #     shot('failed to sign in')
         #     raise Exception("Failed")
         shot('logged in')
-        putValue('cookies', json.dumps(browser.cookies.all()))
+        # putValue('cookies', json.dumps(browser.cookies.all()))
 
         link = browser.find_link_by_partial_href('Account/Activity').first
         account_id = link['href'].split('/')[-1]
-        print 'account_id', account_id
         browser.visit('https://cards.chase.com/Account/DownloadActivity.aspx?AI=%s' % (account_id,))
 
         #----------------------------------------------------------------------
@@ -147,26 +152,14 @@ def getOFX(username, password, startdate, enddate, verbose=False):
 
         browser.find_by_id('FromDate_Value').fill(startdate.strftime('%m/%d/%Y'))
         browser.find_by_id('ToDate_Value').fill(enddate.strftime('%m/%d/%Y'))
-        browser.find_by_id('DownloadType').first.select('OFX')
+        browser.find_by_id('DownloadType').first.select('QFX')
         shot('before download')
 
         browser.find_by_id('BtnDownloadActivity').first.click()
         shot('after clicking download')
 
-        cookies = browser.cookies.all()
-        
-        print 'cookies', cookies
-
-        r = requests.get('https://cards.chase.com/Account/AccountDownloadFile.aspx',
-            cookies=cookies, headers={'Referer': browser.url})
-        # r = requests.post(download_url, data=data, cookies=cookies,
-        #     headers={'Referer': browser.url})
-        print r, r.request
-        print repr(r.text)
-        if r.ok:
-            return r.text
-        shot('failure')
-        raise Exception('Failed on the last part')
+        files = os.listdir(download_dir)
+        return os.path.join(download_dir, files[0])
 
 
 
@@ -177,9 +170,9 @@ def getTransactions(args):
     password = getValue('password', prompt='Password?')
 
     domain = 'chase.com'
-    ofx = getOFX(username, password, startdate, enddate, verbose=args.verbose)
-    print 'ofx: %r' % (ofx,)
-    parsed = parseFile(StringIO(ofx))
+    ofx_file = getOFX(username, password, startdate, enddate, verbose=args.verbose)
+    parsed = parseFile(open(ofx_file, 'rb'))
+    os.remove(ofx_file)
     ret = {
         'accounts': []
     }
@@ -202,7 +195,7 @@ def getTransactions(args):
                 'id': transaction['id'],
                 'posted': transaction['posted'].isoformat(),
                 'amount': transaction['amount'],
-                'description': transaction['memo'] or transaction['name'],
+                'description': transaction.get('memo', '') or transaction.get('name', ''),
             }
             a['transactions'].append(t)
         ret['accounts'].append(a)
