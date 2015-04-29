@@ -12,15 +12,17 @@ import json
 import argparse
 import tempfile
 import os
+import time
 
 i = 0
-def screenshot(browser, name=''):
+def screenshot(browser, debug_dir, name=''):
     global i
     name = name or 'def'
     i += 1
-    browser.driver.save_screenshot('/tmp/images/%d-%s.png' % (i, name))
-    open('/tmp/images/%d-%s.html' % (i, name), 'wb').write(browser.html.encode('utf-8'))
-    open('/tmp/images/%d-%s.cookies.json' % (i, name), 'wb').write(json.dumps(browser.cookies.all(), indent=2))
+    base = os.path.join(debug_dir, '%d-%s' % (i, name))
+    browser.driver.save_screenshot(base + '.png')
+    open(base + '.html', 'wb').write(browser.html.encode('utf-8'))
+    open(base + '.cookies.json', 'wb').write(json.dumps(browser.cookies.all(), indent=2))
 
 
 from HTMLParser import HTMLParser
@@ -40,8 +42,52 @@ def strip_tags(html):
     return s.get_data()
 
 
+def wait_for(browser, func, wait_time=None):
+    wait_time = wait_time or browser.wait_time
+    end_time = time.time() + wait_time
 
-def getOFX(username, password, startdate, enddate, verbose=False):
+    while time.time() < end_time:
+        try:
+            if func():
+                return True
+        except Exception:
+            pass
+    raise Exception("Waiting failed on func: %r" % (func,))
+
+
+def wait_for_text(browser, text, wait_time=None):
+    def f(text):
+        browser.html.index(text)
+        return True
+    try:
+        return wait_for(browser, partial(f, text), wait_time=wait_time)
+    except:
+        raise Exception('Could not find text: %r' % (text,))
+
+
+def wait_for_texts(browser, texts, wait_time=None):
+    found = []
+    def check(texts):
+        text = browser.html
+        for t in texts:
+            try:
+                text.index(t)
+                found.append(t)
+                return found
+            except Exception:
+                pass
+        return False
+    try:
+        wait_for(browser, partial(check, texts), wait_time=wait_time)
+    except Exception as e:
+        raise Exception("Could not find strings: %r" % (texts,), e)
+    if found:
+        return found[0]
+    else:
+        raise Exception('Could not find strings: %r' % (texts,))
+
+
+def getOFX(username, password, startdate, enddate, verbose=False, debug_dir=None):
     download_dir = tempfile.mkdtemp()
     preferences = {
         'browser.download.folderList': 2, 
@@ -49,10 +95,10 @@ def getOFX(username, password, startdate, enddate, verbose=False):
         'browser.download.dir': download_dir,
         'browser.helperApps.neverAsk.saveToDisk': 'application/x-ofx', 
     }
-    with Browser('firefox', profile_preferences=preferences) as browser:
-        shot = partial(screenshot, browser)
-        if not verbose:
-            shot = lambda *a,**kw:None
+    if not debug_dir:
+        debug_dir = tempfile.mkdtemp()
+    with Browser('firefox', wait_time=10, profile_preferences=preferences) as browser:
+        shot = partial(screenshot, browser, debug_dir)
 
         # load cookies from before, if possible
         # try:
@@ -65,7 +111,7 @@ def getOFX(username, password, startdate, enddate, verbose=False):
         # home page
         #----------------------------------------------------------------------
         browser.visit('https://www.chase.com')
-        if not browser.is_element_present_by_name('usr_name', wait_time=10):
+        if not browser.is_element_present_by_name('usr_name'):
             shot('nousername')
             raise Exception("Can't find username input")
         shot('loaded')
@@ -76,8 +122,18 @@ def getOFX(username, password, startdate, enddate, verbose=False):
         browser.find_by_css('div.field.initialized.loginBtn a').first.click()
         shot('afterlogin')
 
-        # maybe authorize the computer
-        if browser.is_element_present_by_id('NextButton', wait_time=1):
+
+        browser.execute_script("setTimeout('dredirect()',1000);") 
+
+        try:
+            found = wait_for_texts(browser, [
+                'Welcome',
+                'Identification Code',
+            ])
+        except:
+            shot('failed to sign in')
+            raise
+        if found == 'Identification Code':
             #------------------------------------------------------------------
             # computer not authorized
             #------------------------------------------------------------------
@@ -134,9 +190,6 @@ def getOFX(username, password, startdate, enddate, verbose=False):
         #----------------------------------------------------------------------
         # logged in to account
         #----------------------------------------------------------------------
-        # if not browser.is_element_present_by_css('table.account.information', wait_time=10):
-        #     shot('failed to sign in')
-        #     raise Exception("Failed")
         shot('logged in')
         # putValue('cookies', json.dumps(browser.cookies.all()))
 
@@ -152,14 +205,22 @@ def getOFX(username, password, startdate, enddate, verbose=False):
 
         browser.find_by_id('FromDate_Value').fill(startdate.strftime('%m/%d/%Y'))
         browser.find_by_id('ToDate_Value').fill(enddate.strftime('%m/%d/%Y'))
-        browser.find_by_id('DownloadType').first.select('QFX')
+        browser.find_by_id('DownloadType').first.select('OFX')
         shot('before download')
 
         browser.find_by_id('BtnDownloadActivity').first.click()
         shot('after clicking download')
 
-        files = os.listdir(download_dir)
-        return os.path.join(download_dir, files[0])
+        import time
+        attempts = 50
+        while attempts:
+            attempts -= 1
+            files = os.listdir(download_dir)
+            if files:
+                return os.path.join(download_dir, files[0])
+            time.sleep(0.1)
+        shot('failed_to_download')
+        raise Exception('Could not download file')
 
 
 
@@ -170,7 +231,8 @@ def getTransactions(args):
     password = getValue('password', prompt='Password?')
 
     domain = 'chase.com'
-    ofx_file = getOFX(username, password, startdate, enddate, verbose=args.verbose)
+    ofx_file = getOFX(username, password, startdate, enddate, verbose=args.verbose,
+        debug_dir=args.debug_dir)
     parsed = parseFile(open(ofx_file, 'rb'))
     os.remove(ofx_file)
     ret = {
@@ -208,11 +270,17 @@ if __name__ == '__main__':
     parser.add_argument('--verbose', '-v',
         action="store_true",
         help='Display debugging information')
+    parser.add_argument('--debug-dir', '-d',
+        default=None,
+        help='Path to store debug files in.  Implies --verbose')
     parser.add_argument('days',
         type=int,
         default=10,
         help='Days back of transactions to get (default %(default)s)')
     args = parser.parse_args()
+
+    if args.debug_dir:
+        args.verbose = True
 
     ret = getTransactions(args)
     print json.dumps(ret, indent=2)
