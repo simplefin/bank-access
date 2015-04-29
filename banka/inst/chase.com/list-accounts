@@ -1,0 +1,287 @@
+#!/usr/bin/env python
+# Copyright (c) The SimpleFIN Team
+# See LICENSE for details.
+
+from siloscript import getValue, getToken
+#from siloscript import putValue
+from functools import partial
+from splinter import Browser
+from datetime import date, timedelta
+from parsefin import parseFile
+import json
+import argparse
+import tempfile
+import os
+import time
+
+i = 0
+def screenshot(browser, debug_dir, name=''):
+    global i
+    name = name or 'def'
+    i += 1
+    base = os.path.join(debug_dir, '%d-%s' % (i, name))
+    browser.driver.save_screenshot(base + '.png')
+    open(base + '.html', 'wb').write(browser.html.encode('utf-8'))
+    open(base + '.cookies.json', 'wb').write(json.dumps(browser.cookies.all(), indent=2))
+
+
+from HTMLParser import HTMLParser
+
+class MLStripper(HTMLParser):
+    def __init__(self):
+        self.reset()
+        self.fed = []
+    def handle_data(self, d):
+        self.fed.append(d)
+    def get_data(self):
+        return ' '.join(self.fed)
+
+def strip_tags(html):
+    s = MLStripper()
+    s.feed(html)
+    return s.get_data()
+
+
+def wait_for(browser, func, wait_time=None):
+    wait_time = wait_time or browser.wait_time
+    end_time = time.time() + wait_time
+
+    while time.time() < end_time:
+        try:
+            if func():
+                return True
+        except Exception:
+            pass
+    raise Exception("Waiting failed on func: %r" % (func,))
+
+
+def wait_for_text(browser, text, wait_time=None):
+    def f(text):
+        browser.html.index(text)
+        return True
+    try:
+        return wait_for(browser, partial(f, text), wait_time=wait_time)
+    except:
+        raise Exception('Could not find text: %r' % (text,))
+
+
+def wait_for_texts(browser, texts, wait_time=None):
+    found = []
+    def check(texts):
+        text = browser.html
+        for t in texts:
+            try:
+                text.index(t)
+                found.append(t)
+                return found
+            except Exception:
+                pass
+        return False
+    try:
+        wait_for(browser, partial(check, texts), wait_time=wait_time)
+    except Exception as e:
+        raise Exception("Could not find strings: %r" % (texts,), e)
+    if found:
+        return found[0]
+    else:
+        raise Exception('Could not find strings: %r' % (texts,))
+
+
+def getOFX(username, password, startdate, enddate, verbose=False, debug_dir=None):
+    download_dir = tempfile.mkdtemp()
+    preferences = {
+        'browser.download.folderList': 2, 
+        'browser.download.manager.showWhenStarting': False,
+        'browser.download.dir': download_dir,
+        'browser.helperApps.neverAsk.saveToDisk': 'application/x-ofx', 
+    }
+    if not debug_dir:
+        debug_dir = tempfile.mkdtemp()
+    with Browser('firefox', wait_time=10, profile_preferences=preferences) as browser:
+        shot = partial(screenshot, browser, debug_dir)
+
+        # load cookies from before, if possible
+        # try:
+        #     last_cookies = getValue('cookies')
+        #     print 'got cookies: %r' % (last_cookies,)
+        # except:
+        #     print 'no cookies'
+
+        #----------------------------------------------------------------------
+        # home page
+        #----------------------------------------------------------------------
+        browser.visit('https://www.chase.com')
+        if not browser.is_element_present_by_name('usr_name'):
+            shot('nousername')
+            raise Exception("Can't find username input")
+        shot('loaded')
+        
+        browser.find_by_id('usr_name_home').first.fill(username)
+        browser.find_by_id('usr_password_home').first.fill(password)
+        shot('filledin')
+        browser.find_by_css('div.field.initialized.loginBtn a').first.click()
+        shot('afterlogin')
+
+
+        browser.execute_script("setTimeout('dredirect()',1000);") 
+
+        try:
+            found = wait_for_texts(browser, [
+                'Welcome',
+                'Identification Code',
+            ])
+        except:
+            shot('failed to sign in')
+            raise
+        if found == 'Identification Code':
+            #------------------------------------------------------------------
+            # computer not authorized
+            #------------------------------------------------------------------
+            browser.find_by_id('NextButton').first.click()
+
+            #------------------------------------------------------------------
+            # choose authorization method
+            #------------------------------------------------------------------
+            attempts = 3
+            while attempts:
+                attempts -= 1
+                shot('id-computer-secondpage')
+
+                labels = browser.find_by_css('label')
+
+                options = []
+                opt_dict = {}
+                for label in labels:
+                    if (label['for'] or '').startswith('usrCtrlOtp_'):
+                        text = strip_tags(label.html).strip()
+                        opt_dict[text] = label['for']
+                        options.append(text)
+
+                response = getValue('delivery_method',
+                    prompt="How do you want to get a code?",
+                    save=False,
+                    options=options)
+                delivery_method = opt_dict[response]
+
+                browser.find_by_id(delivery_method).first.click()
+                shot('chosen')
+                browser.find_by_id('NextButton').first.click()
+
+                #--------------------------------------------------------------
+                # Enter code
+                #--------------------------------------------------------------
+                code = getValue('activation_code',
+                    prompt="Enter the code you are given (leave blank if you didn't get it):",
+                    save=False)
+                if not code:
+                    # go get another one
+                    browser.find_by_id('ancNewIdentificationCode').first.click()
+                    continue
+
+                browser.find_by_id('usrCtrlOtp_txtActivationCode').first.fill(code)
+                browser.find_by_id('usrCtrlOtp_txtPassword').first.fill(password)
+                shot('code entered')
+                browser.find_by_id('NextButton').first.click()
+                shot('code submitted')
+                break
+
+            shot('device authorized')
+
+        #----------------------------------------------------------------------
+        # logged in to account
+        #----------------------------------------------------------------------
+        shot('logged in')
+        # putValue('cookies', json.dumps(browser.cookies.all()))
+
+        link = browser.find_link_by_partial_href('Account/Activity').first
+        account_id = link['href'].split('/')[-1]
+        browser.visit('https://cards.chase.com/Account/DownloadActivity.aspx?AI=%s' % (account_id,))
+
+        #----------------------------------------------------------------------
+        # Download Activity
+        #----------------------------------------------------------------------
+        shot('activity')
+        browser.find_by_id('SelectDateRange').first.click()
+
+        browser.find_by_id('FromDate_Value').fill(startdate.strftime('%m/%d/%Y'))
+        browser.find_by_id('ToDate_Value').fill(enddate.strftime('%m/%d/%Y'))
+        browser.find_by_id('DownloadType').first.select('OFX')
+        shot('before download')
+
+        browser.find_by_id('BtnDownloadActivity').first.click()
+        shot('after clicking download')
+
+        import time
+        attempts = 50
+        while attempts:
+            attempts -= 1
+            files = os.listdir(download_dir)
+            if files:
+                return os.path.join(download_dir, files[0])
+            time.sleep(0.1)
+        shot('failed_to_download')
+        raise Exception('Could not download file')
+
+
+
+def getTransactions(args):
+    enddate = date.today()
+    startdate = enddate - timedelta(days=args.days)
+    username = getValue('username', prompt='Username?')
+    password = getValue('password', prompt='Password?')
+
+    domain = 'chase.com'
+    ofx_file = getOFX(username, password, startdate, enddate, verbose=args.verbose,
+        debug_dir=args.debug_dir)
+    parsed = parseFile(open(ofx_file, 'rb'))
+    os.remove(ofx_file)
+    ret = {
+        'accounts': []
+    }
+    for account in parsed['accounts']:
+        a = {
+            'org': {
+                'domain': domain,
+                'sfin-url': None,
+            },
+            'id': getToken(account['account_id']),
+            'name': 'unknown',
+            'currency': account['currency'],
+            'balance': str(account['balance']),
+            'available_balance': 'unknown',
+            'balance-as-of': account['transaction_end'].isoformat(),
+            'transactions': [],
+        }
+        for transaction in account['transactions']:
+            t = {
+                'id': transaction['id'],
+                'posted': transaction['posted'].isoformat(),
+                'amount': transaction['amount'],
+                'description': transaction.get('memo', '') or transaction.get('name', ''),
+            }
+            a['transactions'].append(t)
+        ret['accounts'].append(a)
+
+    return ret
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--verbose', '-v',
+        action="store_true",
+        help='Display debugging information')
+    parser.add_argument('--debug-dir', '-d',
+        default=None,
+        help='Path to store debug files in.  Implies --verbose')
+    parser.add_argument('days',
+        type=int,
+        default=10,
+        help='Days back of transactions to get (default %(default)s)')
+    args = parser.parse_args()
+
+    if args.debug_dir:
+        args.verbose = True
+
+    ret = getTransactions(args)
+    print json.dumps(ret, indent=2)
+

@@ -1,0 +1,10 @@
+# Copyright (c) The SimpleFIN Team
+# See LICENSE for details.
+
+---
+name: Chase
+domain: chase.com
+products:
+  - creditcards
+maintainers:
+  - github.com/iffy

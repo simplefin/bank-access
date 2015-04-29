@@ -9,7 +9,7 @@ requests==2.6.0
 PyYAML==3.11
 
 # unpackaged
-https://github.com/simplefin/siloscript/archive/v0.2.1.tar.gz
+https://github.com/simplefin/siloscript/archive/v0.3.1.tar.gz
 https://github.com/iffy/parsefin/archive/v0.4.0.tar.gz
 
 splinter==0.7.2
