@@ -1,0 +1,4 @@
+---
+- hosts: worker
+  tasks:
+    - include: makeworker.yml

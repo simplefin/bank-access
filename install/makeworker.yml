@@ -1,0 +1,52 @@
+---
+- name: Install system packages
+  apt: name={{ item }} state=present
+  with_items:
+    - python-dev
+    - build-essential
+    - python-pip
+    - git
+    - libsqlite3-dev
+    - curl
+    - libz-dev
+    - libxml2-dev
+    - libxslt1-dev
+    - x11vnc
+    - xvfb
+    - firefox
+    - xfonts-100dpi
+    - xfonts-75dpi
+    - xfonts-scalable
+    - xfonts-cyrillic
+- name: Install python packages
+  sudo: yes
+  sudo_user: "{{ worker_user }}"
+  pip: virtualenv={{ worker_virtualenv }}
+       requirements={{ banka_path }}/requirements.txt
+
+#--------------------------------------
+# Xvfb
+#--------------------------------------
+- name: Init xvfb
+  copy: dest=/etc/init.d/xvfb
+        src={{ banka_path }}/install/xvfb.init.d
+        mode=u+x
+- name: Start xvfb
+  service: name=xvfb state=started
+
+#--------------------------------------
+# x11vnc
+#--------------------------------------
+- file: path=/home/root/.vnc/passwd
+        owner=root
+        group=root
+        state=directory
+- name: Configure x11vnc
+  command: x11vnc -storepasswd foo /home/root/.vnc/passwd
+           creates="/home/root/.vnc/passwd"
+- name: Init x11vnc
+  copy: dest=/etc/init.d/x11vnc
+        src={{ banka_path }}/install/x11vnc.init.d
+        mode=u+x
+- name: Start x11vnc
+  service: name=x11vnc state=started
