@@ -43,7 +43,7 @@ Each bank access script expects to have a secure key value store available to it
 
 If you have docker installed, do this:
 
-    docker run -it simplefin/banka siloscript run banka/inst/chase.com/list-accounts
+    docker run --rm -it simplefin/banka siloscript run banka/inst/chase.com/list-accounts 5
 
 
 ## If your bank isn't listed ##
