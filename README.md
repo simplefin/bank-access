@@ -18,7 +18,7 @@ And please contribute a script for your bank!
 
 # Thanks #
 
-Huge thank you to captin411 and this project https://github.com/captin411/ofxclient which makes it easy to connect to most banks.
+Huge thank you to captin411's [ofxclient](https://github.com/captin411/ofxclient) project which makes it easy to connect to most banks.
 
 
 # What's in here? #
@@ -36,7 +36,7 @@ In this document, the following terms are used interchangeably:
 
 # How it works #
 
-Each bank access script expects to have a secure key value store available to it as an HTTP server.  The (siloscript)[https://github.com/simplefin/siloscript] project provides such a server.
+Each bank access script expects to have a secure key value store available to it as an HTTP server.  The [siloscript](https://github.com/simplefin/siloscript) project provides such a server.
 
 
 ## Docker Quickstart ##
