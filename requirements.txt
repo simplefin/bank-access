@@ -6,7 +6,7 @@ ofxhome==0.3.2
 ofxparse==0.14
 six==1.9.0
 requests==2.20.0
-PyYAML==5.1
+PyYAML==5.4
 
 # unpackaged
 https://github.com/simplefin/siloscript/archive/v0.3.1.tar.gz
